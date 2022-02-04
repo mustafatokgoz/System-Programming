@@ -20,18 +20,19 @@ int main(){
             case 0:
                 write(1, child, strlen(child));
                 cur_pid = getpid();
-                sprintf(pid, "%d", cur_pid);
+                sprintf(pid, "%d  ", cur_pid);
                 write(1, pid , strlen(pid));
-                exitInf("Success");
+                exitInf(" Success");
             default:
-                write(1, parent, strlen(parent));
-                cur_pid = getpid();
-                sprintf(pid, "%d", cur_pid);
-                write(1, pid, strlen(pid));
                 break;    
         }
     }
-
+    for(i = 0; i < 5; i++)
+        wait(NULL);
+    write(1, parent, strlen(parent));
+    cur_pid = getpid();
+    sprintf(pid, "%d ", cur_pid);
+    write(1, pid, strlen(pid));    
     return 0;
 
 }
