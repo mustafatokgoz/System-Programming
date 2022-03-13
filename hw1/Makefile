@@ -1,6 +1,6 @@
 output: 
-	gcc -o run hw1.c helper.c
+	gcc -o hw1 hw1.c helper.c
 
 
 clean: 
-	rm  run
+	rm  hw1

@@ -2,6 +2,6 @@
 #define HELPER_H
 
 void errExit(char *);
-void exitInf(char *);
+void exitInf(int);
 int len(char *str);
 #endif
