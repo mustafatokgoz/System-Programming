@@ -1,5 +1,9 @@
 #include "helper.h"
 #include <stdlib.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/stat.h>
 
 int len(char *str){
     int i = 0;
@@ -19,7 +23,7 @@ void errExit(char *inf){
 }
 
 
-void exitInf(int err){
+void exitInf(char *err){
     perror(err);
     exit(0);
 }

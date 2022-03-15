@@ -26,14 +26,16 @@ int main(int argc, char **argv){
 
 }
 
-void change_occurance(int temp_fd, char *cur_occ, char *occ,int star){
-    int current_status = (len(cur_occ) -1) * -1;
-    if (star == 0){
-        current_status = (len(cur_occ) - 2 ) * -1;
-    }
+void change_occurance(int temp_fd, char *cur_occ, char *occ,int many){
+    int current_status = (many  -1 )* -1;
+    //int current_status = (len(cur_occ) -1) * -1;
+    //if (star == 0){
+    //    current_status = (len(cur_occ) - 2 ) * -1;
+    //}
+
     if(lseek(temp_fd,current_status,SEEK_END) == -1)
     {
-        exitInf(errno);
+        exitInf("lseek error");
     }
     write(temp_fd, occ, len(occ));
 }
@@ -45,6 +47,7 @@ void helper_op(int *number_l, int *check, int *check2){
     }
     *number_l = 0;
     *check = 0;
+    
 }
 
 void helper_else(boolean case_insensitive, char cur,char c, int *number_l, int *check, int *check2,int *star,int insense){
@@ -59,14 +62,25 @@ void helper_else(boolean case_insensitive, char cur,char c, int *number_l, int *
             }
         }
         else{
-            *star = 0;
             helper_op(number_l,check,check2);
         }
     }
     else{
-        *star = 0;
         helper_op(number_l,check,check2);
     }
+}
+
+
+int find_star_number(char *word){
+    int i = 0;
+    int number = 0;
+    for(i = 0; word[i]!='\0'; i++){
+        if(word[i]=='*'){
+            number++;
+        }
+    }
+    
+    return number;
 }
 
 void file_operations(char **arr, int count, char *file_name){
@@ -77,7 +91,8 @@ void file_operations(char **arr, int count, char *file_name){
     char last_c;
     char temp_file[]="/tmp/my-temp-fileXXXXXX";
     boolean case_insensitive = False;
-    int number_l = 0, check = 0, check2 = 0, star = 0;
+    int number_l = 0, check = 0, check2 = 0, star = 0, star_number = 0;
+    struct flock fl = { F_WRLCK, SEEK_SET, 0,       0,     0 };
 
     fd = open_file(file_name);
 
@@ -86,8 +101,11 @@ void file_operations(char **arr, int count, char *file_name){
     unlink(temp_file);
 
     if (temp_fd < 1){
-        exitInf(errno);
+        exitInf("temp file error");
     }
+
+    fl.l_pid    = getpid();
+
     
     for(i = 0; i < count; i = i + 2){
         if ((i+2) < count && len(arr[i+2]) == 1 && arr[i+2][0] == 'i'){
@@ -99,15 +117,24 @@ void file_operations(char **arr, int count, char *file_name){
         check = 0;
         check2 = 0;
         number_l = 0;
+
+        if (fcntl(fd, F_SETLKW, &fl) == -1){
+    		perror("fcntl");
+    		exit(1);
+        }    
+
+        //write(1, "it will be lock\n" , len("it will be lock\n"));
+        //write(1, "Press any to release lock: ", len("Press any to release lock: "));
+        //getchar();
  
         if(lseek(fd,0,SEEK_SET) == -1)
         {
-            exitInf(errno);
+            exitInf("lseek error");
         }
         
         if(lseek(temp_fd,0,SEEK_SET) == -1)
         {
-            exitInf(errno);
+            exitInf("lseek error");
         }
         rd = read(fd, &c, 1);
         while(rd > 0){
@@ -129,19 +156,21 @@ void file_operations(char **arr, int count, char *file_name){
 
                 helper_else(case_insensitive,arr[i][check],c,&number_l,&check,&check2,&star,0);
             }
-            printf("bu %d %d",number_l, len(arr[i]));
+            //printf("bu %d %d ",number_l, len(arr[i]));
             if (number_l == len(arr[i])){
-                if (star == 1){
-                    change_occurance(temp_fd,arr[i],arr[i+1],star);
+                if(star == 1){
+                    star_number = find_star_number(arr[i]) + 1 ;
+                    change_occurance(temp_fd,arr[i],arr[i+1],(len(arr[i]) - star_number));
+                    perror("giriyor");
+                    star = 0;
                 }
-                else
-                {
-                    change_occurance(temp_fd,arr[i],arr[i+1],star);
-                }
-                
+                else{
+                    star_number = find_star_number(arr[i]);
+                    change_occurance(temp_fd,arr[i],arr[i+1],(len(arr[i])- star_number));
+                }       
             }
             else{
-                if(check2 == 0) {
+                if(check2 == 0 && star == 0) {
                         write(temp_fd, &c, 1);
                         
                 }
@@ -157,30 +186,54 @@ void file_operations(char **arr, int count, char *file_name){
                     if(number_l != len(arr[i])){
                     }
             }
-
             
         }
-        close(fd);
-        fd=open(file_name,O_RDWR | O_TRUNC);
+
+        write(1," ! buraya ! ",len(" ! buraya ! "));
+        fl.l_type = F_UNLCK;  /* set to unlock same region */
+
+        if (fcntl(fd, F_SETLK, &fl) == -1) {
+    	    perror("fcntl");
+    	    exit(1);
+        }
+
+        ftruncate(fd, 0);
+        //close(fd);
+
+        //fd=open(file_name,O_RDWR | O_TRUNC);
+
+        if (fcntl(fd, F_SETLKW, &fl) == -1){
+    		perror("fcntl");
+    		exit(1);
+        }
+
         if(lseek(fd,0,SEEK_SET) == -1)
         {
-            exitInf(errno);
+            exitInf("lseek error");
         }
         if(lseek(temp_fd,0,SEEK_SET) == -1)
         {
-            exitInf(errno);
+            exitInf("lseek error");
         }
         rd = read(temp_fd, &c, 1);
         while(rd > 0){
             write(fd,&c,1);
+            write(1,&c,1);
             rd = read(temp_fd, &c, 1);
         }
         if (case_insensitive == True){
             i++;
         }
 
-
+        fl.l_type = F_UNLCK;  /* set to unlock same region */
+    
+        if (fcntl(fd, F_SETLK, &fl) == -1) {
+    	    perror("fcntl");
+    	    exit(1);
+        }
+        ftruncate(temp_fd, 0);
     }
+
     
     /* 
     rd = read(fd, &c, 1);
@@ -220,7 +273,7 @@ void file_operations(char **arr, int count, char *file_name){
 int open_file(char *file_name){
     int fd = open (file_name, O_RDWR);
     if (fd == -1) {
-        exitInf(errno);
+        exitInf("file error");
     }
     return fd;
 }
@@ -233,7 +286,6 @@ void seperate_argumans(char **args, int n){
     int count = 0;
     int control = 0;
     int w_count = 0;
-    int check = 0;
     char **arr;
     int j = 0;
 
@@ -250,6 +302,7 @@ void seperate_argumans(char **args, int n){
         }
         else if (task[i]==';'){
             if (control > 3 || control < 2) {
+                printf("bu %d ",control);
                 errExit("Wrong input task");
             }
             control = 0;
