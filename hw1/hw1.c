@@ -169,7 +169,10 @@ void file_operations(char **arr, int count, char *file_name){
         number_l = 0;
         
         lock_file(fd,fl);
-        ftruncate(temp_fd, 0);
+        if (ftruncate(temp_fd, 0) < 0){
+            errExit("ftruncate error");
+        }
+
         /*
         if (fcntl(fd, F_SETLKW, &fl) == -1){
     		perror("fcntl");
@@ -302,7 +305,9 @@ void file_operations(char **arr, int count, char *file_name){
             
         }
         */
-        ftruncate(fd, 0);
+        if (ftruncate(fd, 0) < 0){
+            errExit("ftrunctae error");
+        }
 
 
         //close(fd);
@@ -329,7 +334,9 @@ void file_operations(char **arr, int count, char *file_name){
 
         */
 
-        ftruncate(fd, 0);
+        if(ftruncate(fd, 0) < 0){
+            errExit("ftruncate error");
+        }
                 
         set_to_begin(fd);
         set_to_begin(temp_fd);
@@ -348,8 +355,11 @@ void file_operations(char **arr, int count, char *file_name){
         if (case_insensitive == True){
             i++;
         }
+        
+        if (ftruncate(fd,count_file-1) < 0){
+            errExit("ftruncate error");
+        }
 
-        ftruncate(fd,count_file-1);
         /* 
         fl.l_type = F_UNLCK;  // set to unlock same region 
     
@@ -362,11 +372,13 @@ void file_operations(char **arr, int count, char *file_name){
 
         unlock_file(fd,fl);
 
-        ftruncate(temp_fd, 0);
+        if (ftruncate(temp_fd, 0) < 0){
+            errExit("ftruncate error");
+        }
 
         set_to_begin(fd);
         set_to_begin(temp_fd);
-
+        free(content);
     }
     close(fd);
 
