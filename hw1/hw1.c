@@ -16,6 +16,8 @@ void change_occurance(int , char *, char *,int);
 void helper_op(int *, int *, int *, int *);
 
 
+int content_count = 0;
+
 int main(int argc, char **argv){
     
     if(argc < 3 || argc > 3){
@@ -28,10 +30,6 @@ int main(int argc, char **argv){
 
 void change_occurance(int temp_fd, char *cur_occ, char *occ,int many){
     int current_status = (many  -1 )* -1;
-    //int current_status = (len(cur_occ) -1) * -1;
-    //if (star == 0){
-    //    current_status = (len(cur_occ) - 2 ) * -1;
-    //}
 
     if(lseek(temp_fd,current_status,SEEK_END) == -1)
     {
@@ -84,7 +82,6 @@ int find_star_number(char *word){
 
 void lock_file(int fd, struct flock fl){
     fl.l_type = F_WRLCK;
-    perror("heyy");
     if (fcntl(fd, F_SETLKW, &fl) == -1){
     		perror("fcntl");
     		exit(1);
@@ -107,23 +104,26 @@ void set_to_begin(int fd){
 }
 
 char *get_content(char *content,int fd){
-    int rd,count = 0 , i = 0;
+    int rd , i = 0;
     char c;
+
+    content_count = 0;
     if(lseek(fd,0,SEEK_SET) == -1){
             exitInf("lseek error");
     }
     rd = read(fd, &c, 1);
-    count++;
+    content_count++;
     while(rd > 0){
         rd = read(fd, &c, 1);
-        count++;
+        content_count++;
     }
-    content = malloc(count * sizeof(char));
+
+    content = malloc(content_count * sizeof(char));
     if(lseek(fd,0,SEEK_SET) == -1){
             exitInf("lseek error");
     }
 
-    for(i = 0; i < count - 1  ; i++){
+    for(i = 0; i < content_count - 1  ; i++){
         read(fd, &c, 1);
         content[i] = c;
     }
@@ -142,6 +142,7 @@ void file_operations(char **arr, int count, char *file_name){
     struct flock fl = { F_WRLCK, SEEK_SET, 0,       0,     0 };
     char *content;
     int begin_check=0;
+    int count_file= 0;
 
     fd = open_file(file_name);
 
@@ -166,8 +167,9 @@ void file_operations(char **arr, int count, char *file_name){
         check = 0;
         check2 = 0;
         number_l = 0;
-
+        
         lock_file(fd,fl);
+        ftruncate(temp_fd, 0);
         /*
         if (fcntl(fd, F_SETLKW, &fl) == -1){
     		perror("fcntl");
@@ -179,7 +181,7 @@ void file_operations(char **arr, int count, char *file_name){
         //write(1, "it will be lock\n" , len("it will be lock\n"));
         //write(1, "Press any to release lock: ", len("Press any to release lock: "));
         //getchar();
-       ;
+        
         content = get_content(content,fd);
 
         set_to_begin(fd);
@@ -197,10 +199,8 @@ void file_operations(char **arr, int count, char *file_name){
         }
 
         */
-       perror("heyy");
-        write(1,content,len(content));
-        write(1,content,len(content));
-        for(j = 0; j < len(content); j++){
+        //write(1,content,content_count);
+        for(j = 0; j < content_count; j++){
             if(content[j] == arr[i][check]){
                 number_l ++;
                 check ++;
@@ -209,21 +209,22 @@ void file_operations(char **arr, int count, char *file_name){
                 if(j == 0){
                     number_l ++;
                     j--;
+                    check++;
                 }
-                if(content[j] == '\n'){
-                    perror("gggg1   ");
+                else if(content[j] == '\n' && j!= content_count -1){
                     number_l ++;
                     write(temp_fd, &content[j], 1);
-                    
+                    check++;
                 }
                 else{
                     helper_else(case_insensitive,arr[i][check],content[j],&number_l,&check,&check2,&j,0);
                 }
-                check ++;
             }
             else if (arr[i][check] == '$'){
-                if(content[j]=='\n'){
+                if(content[j]=='\n' || j == content_count - 1 ){
                     number_l ++;
+                    j--;
+                    check = 0;
                 }
                 check = 0;
             }
@@ -237,7 +238,9 @@ void file_operations(char **arr, int count, char *file_name){
             }
             else{
                 if(check2 == 0) {
+                    if(j < (content_count)){
                         write(temp_fd, &content[j], 1);
+                    }    
                 }
             }
 
@@ -312,9 +315,7 @@ void file_operations(char **arr, int count, char *file_name){
         }
 
         */
-        
-        set_to_begin(fd);
-        set_to_begin(temp_fd);
+
 
         /* 
         if(lseek(fd,0,SEEK_SET) == -1)
@@ -327,15 +328,28 @@ void file_operations(char **arr, int count, char *file_name){
         }
 
         */
+
+        ftruncate(fd, 0);
+                
+        set_to_begin(fd);
+        set_to_begin(temp_fd);
+
+        count_file = 0;
         rd = read(temp_fd, &c, 1);
+        set_to_begin(temp_fd);
         while(rd > 0){
-            write(fd,&c,1);
-            write(1,&c,1);
             rd = read(temp_fd, &c, 1);
+            if(rd > 0){
+                write(fd,&c,1);            
+                write(1,&c,1);
+                count_file++;
+            }
         }
         if (case_insensitive == True){
             i++;
         }
+
+        ftruncate(fd,count_file-1);
         /* 
         fl.l_type = F_UNLCK;  // set to unlock same region 
     
@@ -349,6 +363,10 @@ void file_operations(char **arr, int count, char *file_name){
         unlock_file(fd,fl);
 
         ftruncate(temp_fd, 0);
+
+        set_to_begin(fd);
+        set_to_begin(temp_fd);
+
     }
     close(fd);
 
