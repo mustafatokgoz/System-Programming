@@ -143,6 +143,7 @@ void file_operations(char **arr, int count, char *file_name){
     char *content;
     int begin_check=0;
     int count_file= 0;
+    int b = 0, temp = 0;
 
     fd = open_file(file_name);
 
@@ -156,7 +157,8 @@ void file_operations(char **arr, int count, char *file_name){
 
     fl.l_pid    = getpid();
     
-    
+    lock_file(fd,fl);
+
     for(i = 0; i < count; i = i + 2){
         if ((i+2) < count && len(arr[i+2]) == 1 && arr[i+2][0] == 'i'){
             case_insensitive = True;
@@ -168,7 +170,7 @@ void file_operations(char **arr, int count, char *file_name){
         check2 = 0;
         number_l = 0;
         
-        lock_file(fd,fl);
+        
         if (ftruncate(temp_fd, 0) < 0){
             errExit("ftruncate error");
         }
@@ -181,9 +183,7 @@ void file_operations(char **arr, int count, char *file_name){
         
         */
 
-        //write(1, "it will be lock\n" , len("it will be lock\n"));
-        //write(1, "Press any to release lock: ", len("Press any to release lock: "));
-        //getchar();
+        
         
         content = get_content(content,fd);
 
@@ -203,10 +203,15 @@ void file_operations(char **arr, int count, char *file_name){
 
         */
         //write(1,content,content_count);
+        begin_check = 0;
         for(j = 0; j < content_count; j++){
+            if(len(arr[i]) > check +1 && arr[i][check+1] == '*'){
+                star = 1;
+            }
             if(content[j] == arr[i][check]){
                 number_l ++;
                 check ++;
+                
             }
             else if (arr[i][check] == '^'){
                 if(j == 0){
@@ -216,11 +221,14 @@ void file_operations(char **arr, int count, char *file_name){
                 }
                 else if(content[j] == '\n' && j!= content_count -1){
                     number_l ++;
-                    write(temp_fd, &content[j], 1);
                     check++;
+                    begin_check = 1;
                 }
                 else{
-                    helper_else(case_insensitive,arr[i][check],content[j],&number_l,&check,&check2,&j,0);
+                    number_l=0;
+                    check = 0;
+                    begin_check = 0;
+                    //helper_else(case_insensitive,arr[i][check],content[j],&number_l,&check,&check2,&j,0);
                 }
             }
             else if (arr[i][check] == '$'){
@@ -231,19 +239,67 @@ void file_operations(char **arr, int count, char *file_name){
                 }
                 check = 0;
             }
+            else if (arr[i][check] == '['){
+                    b = 0;
+                    temp = 0;
+                    while(arr[i][check] != ']'){
+                        temp++;
+                        if(arr[i][check] == content[j]){
+                            number_l ++;
+                            b = 1;
+                        }
+                        else if(case_insensitive == True){
+                            if( (arr[i][check] == content[j] - 32 ) || 
+                                 (arr[i][check] == content[j] + 32 )) {
+                                number_l ++;
+                                b = 1;
+                            }
+                        }
+                        check++;
+                    }
+                    if (b == 0){
+                        helper_else(False,arr[i][check],content[j],&number_l,&check,&check2,&j,0);
+                    }
+                    else{
+                        number_l += temp;
+                        check ++;
+                    }
+            }
             else{
+                int temp_check = check;
                 helper_else(case_insensitive,arr[i][check],content[j],&number_l,&check,&check2,&j,0);
+                if(b==1 && check == 0){
+                    if(arr[i][temp_check-1] == ']'){
+                        j--;
+                        check2 = 1;
+                    }
+                    number_l = 0;
+                    check = 0;
+                }
             }
 
 
             if (number_l == len(arr[i])){
-                change_occurance(temp_fd,arr[i],arr[i+1],len(arr[i]));
+                if (b == 1 && begin_check == 0){
+                    change_occurance(temp_fd,arr[i],arr[i+1],len(arr[i])-temp);
+                    b = 0;
+                }
+                else if (b == 0 && begin_check == 1){
+                    change_occurance(temp_fd,arr[i],arr[i+1],len(arr[i])-1);
+                }
+                else if ( b==1 && begin_check == 1){
+                      change_occurance(temp_fd,arr[i],arr[i+1],len(arr[i])-temp-1);  
+                }
+                else{
+                    change_occurance(temp_fd,arr[i],arr[i+1],len(arr[i]));
+                    star = 0;
+                }
             }
             else{
                 if(check2 == 0) {
                     if(j < (content_count)){
                         write(temp_fd, &content[j], 1);
-                    }    
+                    }
                 }
             }
 
@@ -370,7 +426,7 @@ void file_operations(char **arr, int count, char *file_name){
 
         */
 
-        unlock_file(fd,fl);
+        
 
         if (ftruncate(temp_fd, 0) < 0){
             errExit("ftruncate error");
@@ -380,6 +436,11 @@ void file_operations(char **arr, int count, char *file_name){
         set_to_begin(temp_fd);
         free(content);
     }
+    // to test file lock remove slashes
+    //write(1, "it will be lock\n" , len("it will be lock\n"));
+    //write(1, "Press any to release lock: ", len("Press any to release lock: "));
+    //getchar();
+    unlock_file(fd,fl);
     close(fd);
 
 }
@@ -417,8 +478,14 @@ void seperate_argumans(char **args, int n){
         }
         else if (task[i]==';'){
             if (control > 3 || control < 2) {
-                printf("bu %d ",control);
                 errExit("Wrong input task");
+            }
+            if(control == 3){
+                if (i > 1 && task[i-1] == 'i' && task[i-2]== '\\'){
+                }
+                else{
+                    errExit("Wrong input task");
+                }
             }
             control = 0;
             if (w_count != 0){
@@ -433,6 +500,13 @@ void seperate_argumans(char **args, int n){
         
     }
     if (w_count != 0){
+        if(control == 2){
+            if (i > 1 && task[i-1] == 'i' && task[i-2]== '/'){
+            }
+            else{
+                errExit("Wrong input task");
+            }
+        }
         count ++;
         w_count = 0;
     }
