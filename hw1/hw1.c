@@ -82,11 +82,10 @@ int find_star_number(char *word){
 
 void lock_file(int fd, struct flock fl){
     fl.l_type = F_WRLCK;
-    if (fcntl(fd, F_SETLKW, &fl) == -1){
+    if (fcntl(fd, F_SETLK, &fl) == -1){
     		perror("fcntl");
     		exit(1);
     }   
-    perror("heyy2"); 
 }
 
 void unlock_file(int fd, struct flock fl){
@@ -143,19 +142,20 @@ void file_operations(char **arr, int count, char *file_name){
     char *content;
     int begin_check=0;
     int count_file= 0;
-    int b = 0, temp = 0;
+    int b = 0, temp = 0, temp_check = 0 ;
 
     fd = open_file(file_name);
-
+    
     temp_fd=mkstemp(temp_file);
-
+     
     unlink(temp_file);
 
     if (temp_fd < 1){
         exitInf("temp file error");
     }
-
+    
     fl.l_pid    = getpid();
+    
     
     lock_file(fd,fl);
 
@@ -174,35 +174,13 @@ void file_operations(char **arr, int count, char *file_name){
         if (ftruncate(temp_fd, 0) < 0){
             errExit("ftruncate error");
         }
-
-        /*
-        if (fcntl(fd, F_SETLKW, &fl) == -1){
-    		perror("fcntl");
-    		exit(1);
-        }    
-        
-        */
-
-        
+ 
         
         content = get_content(content,fd);
 
         set_to_begin(fd);
         set_to_begin(temp_fd);
 
-        /* 
-        if(lseek(fd,0,SEEK_SET) == -1)
-        {
-            exitInf("lseek error");
-        }
-        
-        if(lseek(temp_fd,0,SEEK_SET) == -1)
-        {
-            exitInf("lseek error");
-        }
-
-        */
-        //write(1,content,content_count);
         begin_check = 0;
         for(j = 0; j < content_count; j++){
             if(len(arr[i]) > check +1 && arr[i][check+1] == '*'){
@@ -215,20 +193,25 @@ void file_operations(char **arr, int count, char *file_name){
             }
             else if (arr[i][check] == '^'){
                 if(j == 0){
-                    number_l ++;
-                    j--;
-                    check++;
+                    if(begin_check != 1){
+                        number_l ++;
+                        j--;
+                        check++;
+                        check2 = 1;
+                    }    
+                    begin_check = 1;
                 }
                 else if(content[j] == '\n' && j!= content_count -1){
                     number_l ++;
                     check++;
+                    
                     begin_check = 1;
                 }
                 else{
                     number_l=0;
                     check = 0;
                     begin_check = 0;
-                    //helper_else(case_insensitive,arr[i][check],content[j],&number_l,&check,&check2,&j,0);
+                    check2 = 0;
                 }
             }
             else if (arr[i][check] == '$'){
@@ -266,7 +249,7 @@ void file_operations(char **arr, int count, char *file_name){
                     }
             }
             else{
-                int temp_check = check;
+                temp_check = check;
                 helper_else(case_insensitive,arr[i][check],content[j],&number_l,&check,&check2,&j,0);
                 if(b==1 && check == 0){
                     if(arr[i][temp_check-1] == ']'){
@@ -276,6 +259,7 @@ void file_operations(char **arr, int count, char *file_name){
                     number_l = 0;
                     check = 0;
                 }
+                
             }
 
 
@@ -306,89 +290,10 @@ void file_operations(char **arr, int count, char *file_name){
             check2 = 0;
 
         }
-
-        /* 
-        rd = read(fd, &c, 1);
-        while(rd > 0){
-            if (c == arr[i][check]){
-                number_l ++;
-                check ++;
-            }
-            else if (arr[i][check] == '*'){
-                if (check > 0){
-                    if (c != arr[i][check-1]){
-                        helper_else(case_insensitive,arr[i][check-1],c,&number_l,&check,&check2,&star,1);
-                    }
-                    else{
-                        star = 1;
-                    }
-                }
-            }
-            else{
-
-                helper_else(case_insensitive,arr[i][check],c,&number_l,&check,&check2,&star,0);
-            }
-            //printf("bu %d %d ",number_l, len(arr[i]));
-            if (number_l == len(arr[i])){
-                if(star == 1){
-                    star_number = find_star_number(arr[i]) + 1 ;
-                    change_occurance(temp_fd,arr[i],arr[i+1],(len(arr[i]) - star_number));
-                    perror("giriyor");
-                    star = 0;
-                }
-                else{
-                    star_number = find_star_number(arr[i]);
-                    change_occurance(temp_fd,arr[i],arr[i+1],(len(arr[i])- star_number));
-                }       
-            }
-            else{
-                if(check2 == 0 && star == 0) {
-                        write(temp_fd, &c, 1);
-                        
-                }
-            }
-            last_c = c;
-            if(check2 == 0) {
-                rd = read(fd, &c, 1);
-            }
-            check2 = 0;
-            if(last_c != c && arr[i][check] == '*'){
-                    check++;
-                    number_l++;
-                    if(number_l != len(arr[i])){
-                    }
-            }
-            
-        }
-        */
         if (ftruncate(fd, 0) < 0){
             errExit("ftrunctae error");
         }
 
-
-        //close(fd);
-
-        //fd=open(file_name,O_RDWR | O_TRUNC);
-        /* 
-        if (fcntl(fd, F_SETLKW, &fl) == -1){
-    		perror("fcntl");
-    		exit(1);
-        }
-
-        */
-
-
-        /* 
-        if(lseek(fd,0,SEEK_SET) == -1)
-        {
-            exitInf("lseek error");
-        }
-        if(lseek(temp_fd,0,SEEK_SET) == -1)
-        {
-            exitInf("lseek error");
-        }
-
-        */
 
         if(ftruncate(fd, 0) < 0){
             errExit("ftruncate error");
@@ -403,8 +308,7 @@ void file_operations(char **arr, int count, char *file_name){
         while(rd > 0){
             rd = read(temp_fd, &c, 1);
             if(rd > 0){
-                write(fd,&c,1);            
-                write(1,&c,1);
+                write(fd,&c,1);
                 count_file++;
             }
         }
@@ -415,17 +319,6 @@ void file_operations(char **arr, int count, char *file_name){
         if (ftruncate(fd,count_file-1) < 0){
             errExit("ftruncate error");
         }
-
-        /* 
-        fl.l_type = F_UNLCK;  // set to unlock same region 
-    
-        if (fcntl(fd, F_SETLK, &fl) == -1) {
-    	    perror("fcntl");
-    	    exit(1);
-        }
-
-        */
-
         
 
         if (ftruncate(temp_fd, 0) < 0){
@@ -436,10 +329,13 @@ void file_operations(char **arr, int count, char *file_name){
         set_to_begin(temp_fd);
         free(content);
     }
-    // to test file lock remove slashes
-    //write(1, "it will be lock\n" , len("it will be lock\n"));
-    //write(1, "Press any to release lock: ", len("Press any to release lock: "));
-    //getchar();
+
+    /* 
+     // to test file lock remove slashes
+     //write(1, "it will be lock\n" , len("it will be lock\n"));
+     //write(1, "Press any to release lock: ", len("Press any to release lock: "));
+     //getchar();
+    */
     unlock_file(fd,fl);
     close(fd);
 
@@ -571,12 +467,9 @@ void seperate_argumans(char **args, int n){
         w_count = 0;
     }
 
-    for(i = 0; i < count ; i++){
-        printf("%s \n", arr[i]);
-    }
 
     file_operations(arr,count,file_name);
-
+    write(1,"Work is finished -> Please check the file! \n",len("Work is finished -> Please check the file! \n"));
 
     for ( i = 0; i < count; i++ ){
         free(arr[i]);
