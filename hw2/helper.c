@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 
 int len(char *str){
@@ -27,6 +28,22 @@ void exitInf(char *err){
     perror(err);
     exit(0);
 }
+
+int open_file(char *filename){
+    int fd = open (filename, O_RDWR);
+    if (fd == -1) {
+        exitInf("file error");
+    }
+    return fd;
+}
+
+void set_to_begin(int fd){
+    if(lseek(fd,0,SEEK_SET) == -1){
+            exitInf("lseek error");
+    }
+}
+
+
 
 
 
