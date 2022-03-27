@@ -8,10 +8,12 @@
 #include <signal.h>
 #include "helper.h"
 
-int create_child_process(char *arr[],int n,int m);
-int read_coordinates(char num[][4],int n, int fd);
+int create_child_process(char **arr,char **num);
+int read_coordinates(char **num,int n, int fd);
 void lock_file(int fd, struct flock fl);
 void unlock_file(int fd, struct flock fl);
+void free_array(char **arr,int n);
+void quit_signal_c();
 
 sig_atomic_t sig_check=0;
 
@@ -22,8 +24,9 @@ void signal_handle(int sig) {
 
 
 int main(int argc, char *argv[]){
-    char *arr[] = {"jim", "jams", NULL };
-    char num[10][4];
+    char **arr;
+    //char num[10][4];
+    char **num;
     char c;
     char *filename;
     char *outputfile;
@@ -58,8 +61,8 @@ int main(int argc, char *argv[]){
           return 1;
         }
         if(sig_check==1){
-                      write(2,"\nYour program was cut by keyboard\n",strlen("\nYour program was cut by keyboard\n"));
-                      exit(0);
+          write(2,"\nYour program was cut by keyboard\n",strlen("\nYour program was cut by keyboard\n"));
+          exit(0);
         }  
     }
     
@@ -68,24 +71,70 @@ int main(int argc, char *argv[]){
         exit(0);
     }
     if(sig_check==1){
-        write(2,"\nYour program was cut by keyboard\n",strlen("\nYour program was cut by keyboard\n"));
-        exit(0);
+       quit_signal_c();
     }  
+
     fd = open_file(filename);
+
+
+
+    num = malloc(11 * sizeof(char *));
+    for(i = 0 ; i < 10; i++){
+        num[i] = malloc(4 * sizeof(char *));
+    }
+    num[10] = NULL;
+
+
+
+    arr = malloc(2 * sizeof(char *));
+    arr[0] = malloc((strlen(outputfile)+1) * sizeof(char *));
+    strcpy(arr[0],outputfile);
+    arr[0][strlen(outputfile)]='\0';
+    arr[1] = NULL;
+
     while (read_coordinates(num,10,fd) == 0){
       for(i = 0; i < 10; i++){
         write(1,num[i],strlen(num[i]));
         write(1,"\n",1);
       }
+      create_child_process(arr,num);
+      
+      if(sig_check == 1){
+        free_array(arr,2);
+        free_array(num,11);
+        quit_signal_c();
+      }
       write(1,"\n",1);
     }
-    //create_child_process(arr,5,2);
+    
+    while(wait(NULL)!=-1);
+
+    write(1,"\nThis is parent side \n",strlen("\nThis is parent side \n"));
+
+    free_array(arr,2);
+
+    free_array(num,11);
+
+
     close(fd);
     return 0;
 }
 
+void quit_signal_c(){
+  write(2,"\nYour program was cut by keyboard\n",strlen("\nYour program was cut by keyboard\n"));
+  exit(0);
+}
 
-int read_coordinates(char num[][4],int n,int fd){
+void free_array(char **arr, int n){
+  int i = 0;
+  for ( i = 0; i < n; i++ ){
+        free(arr[i]);
+  }
+  free(arr);
+}
+
+
+int read_coordinates(char **num,int n,int fd){
   int rd;
   char coord[3];
   int many = 0;
@@ -110,37 +159,31 @@ int read_coordinates(char num[][4],int n,int fd){
 
 
 
-int create_child_process(char *arr[],int n,int m){
+int create_child_process(char **arr,char **num){
     int status;
-    pid_t childPid[n];
     int i = 0;
     int j = 0;
-    write(1,"\nThis is parent side \n",strlen("\nThis is parent side \n"));
-    for(i = 0; i < n ; i++){
-        switch (childPid[i] = fork()) { 
-            case -1: 
-                write(1,"error",strlen("error"));
-                return -1;
-                    /* process creatiotempn error */  
-            case 0: /* Child */
-                write(1,"tttt\n",strlen("tttt\n"));
-                execve("./deneme123",arr,NULL);
-                _exit(127); /* Failed exec; not supposed to reach this line */
-            default: /* Parent */
-                break;
+    switch (fork()) { 
+      case -1: 
+          write(1,"error",strlen("error"));
+          return -1;  
+      case 0: /* Child */
+          write(1,"tttt\n",strlen("tttt\n"));
+          execve("./deneme123",arr,num);
+          _exit(127); /* Failed exec; not supposed to reach this line */
+      default: /* Parent */
+          break;
                
-        }
     }
+    
 
 
      //while(wait(NULL)!=-1);
-     for(j = 0; j < n; j++){
-        if (waitpid(childPid[j], &status, 0) == -1){  
-            return -1; 
-        }      
-    }
-    write(1,"\nThis is parent side \n",strlen("\nThis is parent side \n"));
-     write(1,"\nThis is parent side \n",strlen("\nThis is parent side \n"));
+     //for(j = 0; j < n; j++){
+     //   if (waitpid(childPid[j], &status, 0) == -1){  
+     //       return -1; 
+     //   }      
+      //}
 }
 
 
