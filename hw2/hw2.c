@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <signal.h>
+#include <math.h>
 #include "helper.h"
 
 int create_child_process(char **arr,char **num);
@@ -13,6 +14,7 @@ int read_coordinates(char **num,int n, int fd);
 void lock_file(int fd, struct flock fl);
 void unlock_file(int fd, struct flock fl);
 void free_array(char **arr,int n);
+void read_file_from_output(char *outputfilename, int n);
 void quit_signal_c();
 
 sig_atomic_t sig_check=0;
@@ -33,8 +35,8 @@ int main(int argc, char *argv[]){
     int check_input = 0;
     char *err_mass="Your should enter the correct command (i.e ./processP -i inputFilePath -o outputFilePath ).\n";
     struct sigaction sa;
-    int fd;
-    int i = 0;
+    int fd,ofd;
+    int i = 0,count = 0;
 
 
     sa.sa_handler = signal_handle;
@@ -77,6 +79,12 @@ int main(int argc, char *argv[]){
     fd = open_file(filename);
 
 
+    ofd = open_file(outputfile);
+    if (ftruncate(ofd, 0) < 0){
+            exitInf("ftruncate error");
+    }
+    close(ofd);
+
 
     num = malloc(11 * sizeof(char *));
     for(i = 0 ; i < 10; i++){
@@ -93,12 +101,13 @@ int main(int argc, char *argv[]){
     arr[1] = NULL;
 
     while (read_coordinates(num,10,fd) == 0){
+      
+      create_child_process(arr,num);
       for(i = 0; i < 10; i++){
         write(1,num[i],strlen(num[i]));
         write(1,"\n",1);
       }
-      create_child_process(arr,num);
-      
+      count++;
       if(sig_check == 1){
         free_array(arr,2);
         free_array(num,11);
@@ -109,13 +118,29 @@ int main(int argc, char *argv[]){
     
     while(wait(NULL)!=-1);
 
+    if(sig_check==1){
+      free_array(arr,2);
+      free_array(num,11);
+      quit_signal_c();
+
+    }  
+
     write(1,"\nThis is parent side \n",strlen("\nThis is parent side \n"));
+    
 
     free_array(arr,2);
 
     free_array(num,11);
 
+    if(sig_check==1){
+       quit_signal_c();
+    }  
+       
+    read_file_from_output(outputfile,count);
 
+    if(sig_check==1){
+       quit_signal_c();
+    }  
     close(fd);
     return 0;
 }
@@ -155,7 +180,86 @@ int read_coordinates(char **num,int n,int fd){
   return 0;
 }
 
+double calculate_norm(double *arr,int n){
+  int i = 0;
+  double sum = 0.0;
+  double result = 0.0;
+  for(i = 0; i < n; i++){
+    sum += arr[i] * arr[i];
+  }
+  result = sqrt(sum); 
+  return result;
+}
 
+void find_closest_and_print(double *norm,int n){
+    double max1 = -2147483648.0 ,max2 = -2147483648.0;
+    int i = 0,j = 0;
+    int l = 0, m = 1;
+    if ( n == 1){
+      return;
+    }
+    for(i=0;i<n-1;i++){
+        for(j=i;j<n-1;j++){
+          if(fabs(norm[j]-norm[j+1]) < fabs(norm[l]-norm[m])){
+              l=j;
+              m=j+1;
+          }
+        }
+    }
+    //write ile yaz
+    //sprintfle double ları al ve sayırları buffera
+    printf("The closest two matrices are R_%d and R_%d and their distance is %.3f",l,m,norm[l]-norm[m]);
+
+}
+
+
+void read_file_from_output(char *outputfilename, int n){
+    int rd;
+    int fd;
+    char *content;
+    char c;
+    int i = 0, j = 0, k = 0;
+    char buffer[256];
+    double arr[9];
+    double norm[n], res = 0.0;
+    int n_num = 0;
+
+    fd = open_file(outputfilename);
+    content = malloc(1 * sizeof(char));
+    rd = read(fd,&c,1);
+    if (rd <= 0){
+      exitInf("Output Read Error");
+    }
+    content[0] = c;
+    i++;
+    while(rd > 0 ){
+      content = realloc(content ,(i+1) * sizeof(char));
+      rd = read(fd,&c,1);
+      if(c == ' '){
+           arr[j] = atof(content);
+           printf("budaa %f %s",arr[j],content); 
+           i=0;
+           j++;
+           if(j == 9){
+             norm[k] = calculate_norm(arr,9);
+             k++;
+             j = 0;
+           }
+      }
+      else if (c != '\n'){
+        content[i] = c;
+        i++;
+      }
+      else{
+        i=0;
+      }
+    }
+
+    find_closest_and_print(norm,n);
+    free(content);
+    close(fd);
+
+}
 
 
 
@@ -175,15 +279,6 @@ int create_child_process(char **arr,char **num){
           break;
                
     }
-    
-
-
-     //while(wait(NULL)!=-1);
-     //for(j = 0; j < n; j++){
-     //   if (waitpid(childPid[j], &status, 0) == -1){  
-     //       return -1; 
-     //   }      
-      //}
 }
 
 
@@ -192,7 +287,7 @@ int create_child_process(char **arr,char **num){
 
 void lock_file(int fd, struct flock fl){
     fl.l_type = F_WRLCK;
-    if (fcntl(fd, F_SETLK, &fl) == -1){
+    if (fcntl(fd, F_SETLKW, &fl) == -1){
     		perror("fcntl");
     		exit(1);
     }   
