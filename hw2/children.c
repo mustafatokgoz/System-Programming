@@ -50,16 +50,14 @@ int main(int argc, char *argv[]){
         i = 0;
         j = 0;
         for (ep = environ; *ep != NULL; ep++){
-            write(1,*ep,strlen(*ep));
+            //write(1,*ep,strlen(*ep));
             temp = *ep;
             for(i = 0;i < 4; i++){
-                write(1,&temp[i],1);
                 points[j][i] = temp[i];
             }
             mean[0] += (int) temp[0];
             mean[1] += (int) temp[1];
             mean[2] += (int) temp[2];
-            write(1,"\n",1);
             j++;
         }
 
@@ -82,8 +80,6 @@ int main(int argc, char *argv[]){
         if(sig_check == 1){
             quit_signal_c();
         }
-
-        write(1,"\n",1);
         lock_file(fd,fl);
         for(i = 0; i < 3 ; i++){
             for( j = 0; j < 3; j++){

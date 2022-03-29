@@ -27,7 +27,6 @@ void signal_handle(int sig) {
 
 int main(int argc, char *argv[]){
     char **arr;
-    //char num[10][4];
     char **num;
     char c;
     char *filename;
@@ -36,7 +35,9 @@ int main(int argc, char *argv[]){
     char *err_mass="Your should enter the correct command (i.e ./processP -i inputFilePath -o outputFilePath ).\n";
     struct sigaction sa;
     int fd,ofd;
-    int i = 0,count = 0;
+    int i = 0,count = 0, j = 0;
+    int length;
+    char buffer[256];
 
 
     sa.sa_handler = signal_handle;
@@ -78,11 +79,16 @@ int main(int argc, char *argv[]){
 
     fd = open_file(filename);
 
-
-    ofd = open_file(outputfile);
-    if (ftruncate(ofd, 0) < 0){
-            exitInf("ftruncate error");
+    ofd = open(outputfile, O_WRONLY | O_APPEND | O_CREAT, 0644);
+    if (ofd == -1) {
+        perror("file error");
+        exit(0);
     }
+
+    if (ftruncate(ofd, 0) < 0){
+            errExit("ftruncate error");
+    }
+
     close(ofd);
 
 
@@ -100,13 +106,23 @@ int main(int argc, char *argv[]){
     arr[0][strlen(outputfile)]='\0';
     arr[1] = NULL;
 
+    write(1,"Process P reading ",strlen("Process P reading "));
+    write(1,filename,strlen(filename));
+    write(1,"\n",1);
     while (read_coordinates(num,10,fd) == 0){
-      
-      create_child_process(arr,num);
+      write(1,"Created R_", strlen("Created R_"));
+      length = sprintf(buffer, "%d with ",count);
+      write(1,buffer,length);
+
       for(i = 0; i < 10; i++){
-        write(1,num[i],strlen(num[i]));
-        write(1,"\n",1);
+        length = sprintf(buffer, "(%c,%c,%c)",num[i][0],num[i][1],num[i][2]);
+        write(1,buffer,length);
+        if(i != 9){
+          write(1,",",1);
+        }
       }
+
+      create_child_process(arr,num);
       count++;
       if(sig_check == 1){
         free_array(arr,2);
@@ -115,6 +131,7 @@ int main(int argc, char *argv[]){
       }
       write(1,"\n",1);
     }
+
     
     while(wait(NULL)!=-1);
 
@@ -124,8 +141,10 @@ int main(int argc, char *argv[]){
       quit_signal_c();
 
     }  
-
-    write(1,"\nThis is parent side \n",strlen("\nThis is parent side \n"));
+    write(1,"Reached EOF, collecting outputs from ", strlen("Reached EOF, collecting outputs from "));
+    write(1,outputfile,strlen(outputfile));
+    write(1,"\n",1);
+    //write(1,"\nThis is parent side \n",strlen("\nThis is parent side \n"));
     
 
     free_array(arr,2);
@@ -142,6 +161,7 @@ int main(int argc, char *argv[]){
        quit_signal_c();
     }  
     close(fd);
+
     return 0;
 }
 
@@ -191,24 +211,45 @@ double calculate_norm(double *arr,int n){
   return result;
 }
 
+
+void swap(double *first, double *second){
+    double temp = *first;
+    *first = *second;
+    *second = temp;
+}
+ 
+void bubble_sort(double *arr, int n){
+   int i = 0, j = 0;
+   for (i = 0; i < n - 1; i++)      
+       for (j = 0; j < n-i-1; j++)
+           if (arr[j] > arr[j+1])
+              swap(&arr[j], &arr[j+1]);
+}
+ 
+
+
 void find_closest_and_print(double *norm,int n){
-    double max1 = -2147483648.0 ,max2 = -2147483648.0;
     int i = 0,j = 0;
-    int l = 0, m = 1;
+    int diff = 2147483647;
+    int index1,index2;
     if ( n == 1){
       return;
     }
-    for(i=0;i<n-1;i++){
-        for(j=i;j<n-1;j++){
-          if(fabs(norm[j]-norm[j+1]) < fabs(norm[l]-norm[m])){
-              l=j;
-              m=j+1;
-          }
+    bubble_sort(norm,n);
+    for(i=0; i < n - 1 ;i++){
+        if (fabs(norm[i] - norm[i+1]) < diff){
+          diff = fabs(norm[i] - norm[i+1]);
+          index1 = i;
+          index2 = i+1;
         }
+    }
+
+    for(i = 0; i < n; i++){
+      printf("\n norm i %.3f \n",norm[i]);
     }
     //write ile yaz
     //sprintfle double ları al ve sayırları buffera
-    printf("The closest two matrices are R_%d and R_%d and their distance is %.3f",l,m,norm[l]-norm[m]);
+    printf("The closest two matrices are R_%d and R_%d and their distance is %.3f",index1,index2,fabs(norm[index1]-norm[index2]));
 
 }
 
@@ -237,7 +278,6 @@ void read_file_from_output(char *outputfilename, int n){
       rd = read(fd,&c,1);
       if(c == ' '){
            arr[j] = atof(content);
-           printf("budaa %f %s",arr[j],content); 
            i=0;
            j++;
            if(j == 9){
@@ -272,8 +312,7 @@ int create_child_process(char **arr,char **num){
           write(1,"error",strlen("error"));
           return -1;  
       case 0: /* Child */
-          write(1,"tttt\n",strlen("tttt\n"));
-          execve("./deneme123",arr,num);
+          execve("./processR_i",arr,num);
           _exit(127); /* Failed exec; not supposed to reach this line */
       default: /* Parent */
           break;
