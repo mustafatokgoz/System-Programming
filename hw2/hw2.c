@@ -101,11 +101,11 @@ int main(int argc, char *argv[]){
 
 
 
-    arr = malloc(3 * sizeof(char *));
+    arr = malloc(2 * sizeof(char *));
     arr[0] = malloc((strlen(outputfile)+1) * sizeof(char *));
     strcpy(arr[0],outputfile);
     arr[0][strlen(outputfile)]='\0';
-    arr[2] = NULL;
+    //arr[2] = NULL;
 
     write(1,"Process P reading ",strlen("Process P reading "));
     write(1,filename,strlen(filename));
@@ -117,6 +117,8 @@ int main(int argc, char *argv[]){
       strncpy(arr[1],buffer,length);
 
       create_child_process(arr,num);
+
+      free(arr[1]);
 
       write(1,"Created R_", strlen("Created R_"));
       length = sprintf(buffer, "%d with ",count+1);
@@ -133,7 +135,7 @@ int main(int argc, char *argv[]){
 
       count++;
       if(sig_check == 1){
-        free_array(arr,2);
+        free_array(arr,1);
         free_array(num,11);
         quit_signal_c();
       }
@@ -144,7 +146,7 @@ int main(int argc, char *argv[]){
     while(wait(NULL)!=-1);
 
     if(sig_check==1){
-      free_array(arr,2);
+      free_array(arr,1);
       free_array(num,11);
       quit_signal_c();
 
@@ -154,7 +156,7 @@ int main(int argc, char *argv[]){
     write(1,"\n",1);
     
 
-    free_array(arr,2);
+    free_array(arr,1);
 
     free_array(num,11);
 
@@ -235,7 +237,7 @@ void bubble_sort(double *arr, int n){
  
 
 
-void find_closest_and_print(double *norm,int *indexes,int n){
+void find_closest_and_print(double *norm,int *indexes,double file_content[][9],int n){
     int i = 0,length;
     int diff = 2147483647;
     int index1,index2,res1=0,res2=0;
@@ -266,9 +268,25 @@ void find_closest_and_print(double *norm,int *indexes,int n){
         res2 = i;
       }
     }
-    length = sprintf(buffer,"The closest two matrices are R_%d and R_%d and their distance is %.3f\n",indexes[res1],indexes[res2],fabs(norm_copy[index1]-norm_copy[index2]));
+    length = sprintf(buffer,"The closest two matrices are ");
     write(1,buffer,length);
 
+    length = sprintf(buffer,"(%.3f, %.3f, %.3f) , ",file_content[res1][0],file_content[res1][1],file_content[res1][2]);
+    write(1,buffer,length);
+    length = sprintf(buffer,"(%.3f, %.3f, %.3f) , ",file_content[res1][3],file_content[res1][4],file_content[res1][5]);
+    write(1,buffer,length);
+    length = sprintf(buffer,"(%.3f, %.3f, %.3f) and ",file_content[res1][6],file_content[res1][7],file_content[res1][8]);
+    write(1,buffer,length);
+    
+    length = sprintf(buffer,"(%.3f, %.3f, %.3f) , ",file_content[res2][0],file_content[res2][1],file_content[res2][2]);
+    write(1,buffer,length);
+    length = sprintf(buffer,"(%.3f, %.3f, %.3f) , ",file_content[res2][3],file_content[res2][4],file_content[res2][5]);
+    write(1,buffer,length);
+    length = sprintf(buffer,"(%.3f, %.3f, %.3f) and ",file_content[res2][6],file_content[res2][7],file_content[res2][8]);
+    write(1,buffer,length);
+
+    length = sprintf(buffer,"their distance is %.3f\n",fabs(norm_copy[index1]-norm_copy[index2]));
+    write(1,buffer,length);
 }
 
 
@@ -281,7 +299,8 @@ void read_file_from_output(char *outputfilename, int n){
     double arr[9];
     double norm[n];
     int indexes[n];
-    int ind = 0;
+    double file_content[n][9];
+    int ind = 0,copy=0;
 
     fd = open_file(outputfilename);
     content = malloc(1 * sizeof(char));
@@ -301,6 +320,9 @@ void read_file_from_output(char *outputfilename, int n){
            j++;
            if(j == 9){
              norm[k] = calculate_norm(arr,9);
+             for(copy = 0; copy < 9;copy++){
+                file_content[k][copy] = arr[copy];
+             }
              k++;
              j = 0;
            }
@@ -321,7 +343,7 @@ void read_file_from_output(char *outputfilename, int n){
     }
 
 
-    find_closest_and_print(norm,indexes,n);
+    find_closest_and_print(norm,indexes,file_content,n);
     free(content);
     close(fd);
 
