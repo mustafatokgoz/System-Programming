@@ -7,6 +7,7 @@
 #include <string.h>
 #include <signal.h>
 #include <math.h>
+#include <sys/wait.h>
 #include "helper.h"
 
 int create_child_process(char **arr,char **num);
@@ -35,7 +36,7 @@ int main(int argc, char *argv[]){
     char *err_mass="Your should enter the correct command (i.e ./processP -i inputFilePath -o outputFilePath ).\n";
     struct sigaction sa;
     int fd,ofd;
-    int i = 0,count = 0, j = 0;
+    int i = 0,count = 0;
     int length;
     char buffer[256];
 
@@ -100,29 +101,36 @@ int main(int argc, char *argv[]){
 
 
 
-    arr = malloc(2 * sizeof(char *));
+    arr = malloc(3 * sizeof(char *));
     arr[0] = malloc((strlen(outputfile)+1) * sizeof(char *));
     strcpy(arr[0],outputfile);
     arr[0][strlen(outputfile)]='\0';
-    arr[1] = NULL;
+    arr[2] = NULL;
 
     write(1,"Process P reading ",strlen("Process P reading "));
     write(1,filename,strlen(filename));
     write(1,"\n",1);
     while (read_coordinates(num,10,fd) == 0){
+
+      length = sprintf(buffer, "+%d+\n",count+1);
+      arr[1] = malloc(length * sizeof(char *));
+      strncpy(arr[1],buffer,length);
+
+      create_child_process(arr,num);
+
       write(1,"Created R_", strlen("Created R_"));
-      length = sprintf(buffer, "%d with ",count);
+      length = sprintf(buffer, "%d with ",count+1);
       write(1,buffer,length);
 
       for(i = 0; i < 10; i++){
-        length = sprintf(buffer, "(%c,%c,%c)",num[i][0],num[i][1],num[i][2]);
+        length = sprintf(buffer, "(%d,%d,%d)",num[i][0],num[i][1],num[i][2]);
         write(1,buffer,length);
         if(i != 9){
           write(1,",",1);
         }
       }
 
-      create_child_process(arr,num);
+
       count++;
       if(sig_check == 1){
         free_array(arr,2);
@@ -144,7 +152,6 @@ int main(int argc, char *argv[]){
     write(1,"Reached EOF, collecting outputs from ", strlen("Reached EOF, collecting outputs from "));
     write(1,outputfile,strlen(outputfile));
     write(1,"\n",1);
-    //write(1,"\nThis is parent side \n",strlen("\nThis is parent side \n"));
     
 
     free_array(arr,2);
@@ -156,7 +163,7 @@ int main(int argc, char *argv[]){
     }  
        
     read_file_from_output(outputfile,count);
-
+    
     if(sig_check==1){
        quit_signal_c();
     }  
@@ -228,28 +235,39 @@ void bubble_sort(double *arr, int n){
  
 
 
-void find_closest_and_print(double *norm,int n){
-    int i = 0,j = 0;
+void find_closest_and_print(double *norm,int *indexes,int n){
+    int i = 0,length;
     int diff = 2147483647;
-    int index1,index2;
+    int index1,index2,res1=0,res2=0;
+    double norm_copy[n];
+    char buffer[256];
+
     if ( n == 1){
       return;
     }
-    bubble_sort(norm,n);
+    for(i = 0; i < n; i++){
+      norm_copy[i] = norm[i];
+    }
+
+    bubble_sort(norm_copy,n);
     for(i=0; i < n - 1 ;i++){
-        if (fabs(norm[i] - norm[i+1]) < diff){
-          diff = fabs(norm[i] - norm[i+1]);
+        if (fabs(norm_copy[i] - norm_copy[i+1]) < diff){
+          diff = fabs(norm_copy[i] - norm_copy[i+1]);
           index1 = i;
           index2 = i+1;
         }
     }
 
     for(i = 0; i < n; i++){
-      printf("\n norm i %.3f \n",norm[i]);
+      if(norm[i] == norm_copy[index1]){
+        res1 = i;
+      }
+      else if (norm[i] == norm_copy[index2]){
+        res2 = i;
+      }
     }
-    //write ile yaz
-    //sprintfle double ları al ve sayırları buffera
-    printf("The closest two matrices are R_%d and R_%d and their distance is %.3f",index1,index2,fabs(norm[index1]-norm[index2]));
+    length = sprintf(buffer,"The closest two matrices are R_%d and R_%d and their distance is %.3f\n",indexes[res1],indexes[res2],fabs(norm_copy[index1]-norm_copy[index2]));
+    write(1,buffer,length);
 
 }
 
@@ -258,12 +276,12 @@ void read_file_from_output(char *outputfilename, int n){
     int rd;
     int fd;
     char *content;
-    char c;
+    char c,lastc;
     int i = 0, j = 0, k = 0;
-    char buffer[256];
     double arr[9];
-    double norm[n], res = 0.0;
-    int n_num = 0;
+    double norm[n];
+    int indexes[n];
+    int ind = 0;
 
     fd = open_file(outputfilename);
     content = malloc(1 * sizeof(char));
@@ -273,8 +291,9 @@ void read_file_from_output(char *outputfilename, int n){
     }
     content[0] = c;
     i++;
-    while(rd > 0 ){
+    while(rd > 0){
       content = realloc(content ,(i+1) * sizeof(char));
+      lastc = c;
       rd = read(fd,&c,1);
       if(c == ' '){
            arr[j] = atof(content);
@@ -291,11 +310,18 @@ void read_file_from_output(char *outputfilename, int n){
         i++;
       }
       else{
+        if(c == '\n' && lastc == '+'){
+          if(ind < n){
+            indexes[ind] = atoi(content);
+            ind++;
+          }
+        }
         i=0;
       }
     }
 
-    find_closest_and_print(norm,n);
+
+    find_closest_and_print(norm,indexes,n);
     free(content);
     close(fd);
 
@@ -304,9 +330,6 @@ void read_file_from_output(char *outputfilename, int n){
 
 
 int create_child_process(char **arr,char **num){
-    int status;
-    int i = 0;
-    int j = 0;
     switch (fork()) { 
       case -1: 
           write(1,"error",strlen("error"));
@@ -318,6 +341,7 @@ int create_child_process(char **arr,char **num){
           break;
                
     }
+    return 0;
 }
 
 

@@ -29,7 +29,6 @@ void quit_signal_c(){
 int main(int argc, char *argv[]){
     char **ep,*temp;
     int fd;
-    int result = 0;
     char buffer[256];
     int length = 0;
     int i = 0, j = 0, k = 0;
@@ -45,7 +44,7 @@ int main(int argc, char *argv[]){
     sa.sa_flags=0;
     sigaction(SIGINT,&sa,NULL);
 
-    if (argc == 1){
+    if (argc == 2){
         fd = open_file(argv[0]);
         i = 0;
         j = 0;
@@ -81,6 +80,7 @@ int main(int argc, char *argv[]){
             quit_signal_c();
         }
         lock_file(fd,fl);
+        write(fd,argv[1],strlen(argv[1]));
         for(i = 0; i < 3 ; i++){
             for( j = 0; j < 3; j++){
                 length = sprintf(buffer, "%.3f",covariance_matrix[i][j]);

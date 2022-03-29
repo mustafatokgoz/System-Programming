@@ -1,6 +1,6 @@
 output: 
-	gcc -o processR_i children.c	
-	gcc -o processP hw2.c helper.c -lm
+	gcc -o processR_i children.c -Wall
+	gcc -o processP hw2.c helper.c -lm -Wall
 
 
 clean: 
