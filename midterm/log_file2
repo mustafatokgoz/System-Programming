@@ -1,0 +1,29 @@
+Thu Apr 21 00:34:40 2022 , Server Y (log_file2, p=2, t=3) started
+Thu Apr 21 00:34:40 2022 , Worker PID#2970 is handling client PID#2973, matrix size 3x3, pool busy 1/2
+Thu Apr 21 00:34:40 2022 , Worker PID#2971 is handling client PID#2975, matrix size 3x3, pool busy 2/2
+Thu Apr 21 00:34:40 2022 , Forwarding request of client PID#2980 to serverZ, matrix size 3x3, pool busy 2/2
+Thu Apr 21 00:34:40 2022 , Forwarding request of client PID#2978 to serverZ, matrix size 3x3, pool busy 2/2
+Thu Apr 21 00:34:40 2022 , Forwarding request of client PID#2979 to serverZ, matrix size 3x3, pool busy 2/2
+Thu Apr 21 00:34:40 2022 , Forwarding request of client PID#2974 to serverZ, matrix size 3x3, pool busy 2/2
+Thu Apr 21 00:34:40 2022 , Forwarding request of client PID#2982 to serverZ, matrix size 3x3, pool busy 2/2
+Thu Apr 21 00:34:40 2022 , Forwarding request of client PID#2976 to serverZ, matrix size 3x3, pool busy 2/2
+Thu Apr 21 00:34:40 2022 , Forwarding request of client PID#2977 to serverZ, matrix size 3x3, pool busy 2/2
+Thu Apr 21 00:34:43 2022 , Worker PID#2970 responding to client PID#2973: the matrix IS NOT invertible.
+Thu Apr 21 00:34:43 2022 , Worker PID#2970 is handling client PID#2981, matrix size 3x3, pool busy 2/2
+Thu Apr 21 00:34:43 2022 , Worker PID#2971 responding to client PID#2975: the matrix IS NOT invertible.
+Thu Apr 21 00:34:43 2022 , Worker PID#2971 is handling client PID#2980, matrix size 3x3, pool busy 2/2
+Thu Apr 21 00:34:46 2022 , Worker PID#2970 responding to client PID#2981: the matrix IS NOT invertible.
+Thu Apr 21 00:34:46 2022 , Worker PID#2971 responding to client PID#2980: the matrix IS NOT invertible.
+Thu Apr 21 00:34:46 2022 , Worker PID#2970 is handling client PID#2978, matrix size 3x3, pool busy 2/2
+Thu Apr 21 00:34:46 2022 , Worker PID#2971 is handling client PID#2979, matrix size 3x3, pool busy 2/2
+Thu Apr 21 00:34:49 2022 , Worker PID#2970 responding to client PID#2978: the matrix IS NOT invertible.
+Thu Apr 21 00:34:49 2022 , Worker PID#2970 is handling client PID#2974, matrix size 3x3, pool busy 2/2
+Thu Apr 21 00:34:49 2022 , Worker PID#2971 responding to client PID#2979: the matrix IS NOT invertible.
+Thu Apr 21 00:34:49 2022 , Worker PID#2971 is handling client PID#2982, matrix size 3x3, pool busy 2/2
+Thu Apr 21 00:34:52 2022 , Worker PID#2970 responding to client PID#2974: the matrix IS NOT invertible.
+Thu Apr 21 00:34:52 2022 , Worker PID#2970 is handling client PID#2976, matrix size 3x3, pool busy 2/2
+Thu Apr 21 00:34:52 2022 , Worker PID#2971 responding to client PID#2982: the matrix IS NOT invertible.
+Thu Apr 21 00:34:52 2022 , Worker PID#2971 is handling client PID#2977, matrix size 3x3, pool busy 2/2
+Thu Apr 21 00:34:55 2022 , Worker PID#2970 responding to client PID#2976: the matrix IS NOT invertible.
+Thu Apr 21 00:34:55 2022 , Worker PID#2971 responding to client PID#2977: the matrix IS NOT invertible.
+Thu Apr 21 00:35:19 2022 , SIGINT received, terminating Z and exiting server Y. Total requests handled: 10, 0 invertible, 10 not. 7 requests were forwarded.

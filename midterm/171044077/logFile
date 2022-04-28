@@ -1,0 +1,18 @@
+Fri Apr 22 10:42:54 2022 , Server Y (logFile, p=2, t=1) started
+Fri Apr 22 10:42:54 2022 , Worker PID#2739 is handling client PID#2743, matrix size 5x5, pool busy 1/2
+Fri Apr 22 10:42:54 2022 , Forwarding request of client PID#2744 to serverZ, matrix size 3x3, pool busy 2/2
+Fri Apr 22 10:42:54 2022 , Worker PID#2740 is handling client PID#2747, matrix size 3x3, pool busy 2/2
+Fri Apr 22 10:42:54 2022 , Forwarding request of client PID#2745 to serverZ, matrix size 3x3, pool busy 2/2
+Fri Apr 22 10:42:54 2022 , Forwarding request of client PID#2746 to serverZ, matrix size 5x5, pool busy 2/2
+Fri Apr 22 10:42:54 2022 , Forwarding request of client PID#2748 to serverZ, matrix size 3x3, pool busy 2/2
+Fri Apr 22 10:42:55 2022 , Worker PID#2739 responding to client PID#2743: the matrix is invertible.
+Fri Apr 22 10:42:55 2022 , Worker PID#2739 is handling client PID#2744, matrix size 3x3, pool busy 2/2
+Fri Apr 22 10:42:55 2022 , Worker PID#2740 responding to client PID#2747: the matrix is invertible.
+Fri Apr 22 10:42:55 2022 , Worker PID#2740 is handling client PID#2745, matrix size 3x3, pool busy 2/2
+Fri Apr 22 10:42:56 2022 , Worker PID#2739 responding to client PID#2744: the matrix is invertible.
+Fri Apr 22 10:42:56 2022 , Worker PID#2740 responding to client PID#2745: the matrix is invertible.
+Fri Apr 22 10:42:56 2022 , Worker PID#2739 is handling client PID#2746, matrix size 5x5, pool busy 2/2
+Fri Apr 22 10:42:56 2022 , Worker PID#2740 is handling client PID#2748, matrix size 3x3, pool busy 2/2
+Fri Apr 22 10:42:57 2022 , Worker PID#2740 responding to client PID#2748: the matrix is invertible.
+Fri Apr 22 10:42:57 2022 , Worker PID#2739 responding to client PID#2746: the matrix is invertible.
+Fri Apr 22 10:43:28 2022 , SIGINT received, terminating Z and exiting server Y. Total requests handled: 6, 6 invertible, 0 not. 4 requests were forwarded.
