@@ -14,14 +14,14 @@
 
 
 typedef enum boolI {False = 0,True = 1} boolI;
-typedef enum {Milk = 0,Flour,Walnut,Sugar,Empty} ingredient;
+//typedef enum {Milk = 0,Flour,Walnut,Sugar,Empty} ingredient;
 
 typedef struct track{
   boolI isMilk;
   boolI isFlour;
   boolI isWalnut;
   boolI isSugar;
-  ingredient ing[2];
+  char ing[2];
 }track;
 
 int readfile_2_char(int,char*);
@@ -32,8 +32,8 @@ void initilizeshared();
 void destroy_shared();
 void create_semaphores();
 void destroy_semaphores();
-int pick_ingredient(char f,char s, ingredient *first,ingredient *second);
-int posting_required_semaphores(char first,char second);
+int pick_ingredient(char f,char s, char *first,char *second);
+int posting_required_semaphores(char first, char second);
 void pusher1();
 void pusher2();
 void pusher3();
@@ -64,7 +64,9 @@ int main(int argc, char *argv[]){
     char *err_mass="Your should enter the correct command (i.e ./hw3named -i inputFilePath -n name).\n";
     char array[2];
     int fd;
-    ingredient first,second;
+    char first,second;
+    char buff[256];
+    int value1=0;
 
     while ((c = getopt (argc, argv, "i:n:")) != -1){
       switch (c){
@@ -102,19 +104,28 @@ int main(int argc, char *argv[]){
     while(readfile_2_char(fd,array) != -1){
 
         sem_wait(semAgent);
-        printf(" 1. %c  2. %c \n",array[0],array[1]);
-        if ( pick_ingredient(array[0],array[1],&first,&second) == -1){
-          printf("Wrong input file");
-          first = Empty;
-          second = Empty;
+        if (pick_ingredient(array[0],array[1],&first,&second) == -1){
+          perror("Wrong input file");
+          first = 'E';
+          second = 'E';
         }
         sem_wait(mutex2);
+        sprintf(buff,"the wholesaler (pid %d) delivers %c and %c\n",getpid(),first,second);
+        write(1,buff,strlen(buff));
         keep_track->ing[0] = first;
         keep_track->ing[1] = second;
         sem_post(mutex2);
         if (posting_required_semaphores(first,second) == -1){
+          perror("posting error");
           break;
         }
+        sprintf(buff,"the wholesaler (pid %d) is waiting for the dessert\n",getpid());
+        write(1,buff,strlen(buff));
+
+        sem_wait(semAgent);
+        sprintf(buff,"the wholesaler (pid %d) has obtained the dessert and left\n",getpid());
+        write(1,buff,strlen(buff));
+        sem_post(semAgent);
     }
 
     for(i = 0;i <10; i++){
@@ -130,9 +141,8 @@ int main(int argc, char *argv[]){
 
 
 void pusher1(){
-
   while(True){
-    sem_wait (semMilk);
+    sem_wait(semMilk);
     sem_wait(mutex1);
     sem_wait(mutex2);
     if (keep_track->isFlour == True){
@@ -158,7 +168,7 @@ void pusher1(){
 
 void pusher2(){
   while(True){
-    sem_wait (semFlour);
+    sem_wait(semFlour);
     sem_wait(mutex1);
     sem_wait(mutex2);
     if (keep_track->isMilk == True){
@@ -183,7 +193,7 @@ void pusher2(){
 
 void pusher3(){
   while(True){
-    sem_wait (semWalnut);
+    sem_wait(semWalnut);
     sem_wait(mutex1);
     sem_wait(mutex2);
     if (keep_track->isMilk == True){
@@ -207,7 +217,7 @@ void pusher3(){
 }
 void pusher4(){
   while(True){
-    sem_wait (semSugar);
+    sem_wait(semSugar);
     sem_wait(mutex1);
     sem_wait(mutex2);
     if (keep_track->isMilk == True){
@@ -231,81 +241,214 @@ void pusher4(){
 }
 
 void chef0_func(){
+  char buff[256];
+  int count_dessert = 0;
   while(True){
-    printf("Chef0 %d waiting ingredients \n",getpid());
+    sprintf(buff,"chef0 (pid %d) is waiting for Walnuts and Sugar\n",getpid());
+    write(1,buff,strlen(buff));
     sem_wait(chef0);
     sem_wait(mutex2);
-    printf("Child pid %d ingredients %d %d \n",getpid(),keep_track->ing[0],keep_track->ing[1]);
-    keep_track->ing[0] = Empty;
-    keep_track->ing[1] = Empty;
-    printf("Child pid %d ingredients %d %d \n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    sprintf(buff,"chef0 (pid %d) has taken the Walnuts - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    write(1,buff,strlen(buff));
+    if(keep_track->ing[0] == 'W'){
+      keep_track->ing[0] = 'E';
+    }  
+    else{
+      keep_track->ing[1] = 'E';  
+    }    
+    sprintf(buff,"chef0 (pid %d) has taken the Sugar - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    write(1,buff,strlen(buff));
+    if(keep_track->ing[0] == 'S'){
+      keep_track->ing[0] = 'E';
+    }  
+    else{
+      keep_track->ing[1] = 'E';
+    }   
+    sprintf(buff,"chef0 (pid %d) is preparing the dessert - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    write(1,buff,strlen(buff));
+
+    count_dessert++;
+    sprintf(buff,"chef0 (pid %d) has delivered the dessert - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    write(1,buff,strlen(buff));
+
     sem_post(mutex2);
     sem_post(semAgent);
   }
 }
 void chef1_func(){
+  int count_dessert=0;
+  char buff[256];
   while(True){
-    printf("Chef1 %d waiting ingredients \n",getpid());
+    sprintf(buff,"chef1 (pid %d) is waiting for Flour and Walnuts\n",getpid());
+    write(1,buff,strlen(buff));
     sem_wait(chef1);
     sem_wait(mutex2);
-    printf("Child pid %d ingredients %d %d \n",getpid(),keep_track->ing[0],keep_track->ing[1]);
-    keep_track->ing[0] = Empty;
-    keep_track->ing[1] = Empty;
-    printf("Child pid %d ingredients %d %d \n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    sprintf(buff,"chef1 (pid %d) has taken the Flour - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    write(1,buff,strlen(buff));
+    if(keep_track->ing[0] == 'F'){
+      keep_track->ing[0] = 'E';
+    }  
+    else{
+      keep_track->ing[1] = 'E'; 
+    }
+    sprintf(buff,"chef1 (pid %d) has taken the Walnuts - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    write(1,buff,strlen(buff));
+    if(keep_track->ing[0] == 'W'){  
+      keep_track->ing[0] = 'E';
+    }
+    else{
+      keep_track->ing[1] = 'E'; 
+    }
+    sprintf(buff,"chef1 (pid %d) is preparing the dessert - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    write(1,buff,strlen(buff));
+
+    count_dessert++;
+    sprintf(buff,"chef1 (pid %d) has delivered the dessert - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    write(1,buff,strlen(buff));
     sem_post(mutex2);
     sem_post(semAgent);
   }
 }
 
 void chef2_func(){
+  int count_dessert=0;
+  char buff[256];
   while(True){
-    printf("Chef2 %d waiting ingredients \n",getpid());
+    sprintf(buff,"chef2 (pid %d) is waiting for Sugar and Flour\n",getpid());
+    write(1,buff,strlen(buff));
     sem_wait(chef2);
     sem_wait(mutex2);
-    printf("Child pid %d ingredients %d %d \n",getpid(),keep_track->ing[0],keep_track->ing[1]);
-    keep_track->ing[0] = Empty;
-    keep_track->ing[1] = Empty;
-    printf("Child pid %d ingredients %d %d \n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    sprintf(buff,"chef2 (pid %d) has taken the Sugar - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    write(1,buff,strlen(buff));
+    if(keep_track->ing[0] == 'S'){
+      keep_track->ing[0] = 'E';
+    }  
+    else{
+      keep_track->ing[1] = 'E'; 
+    }
+    sprintf(buff,"chef2 (pid %d) has taken the Flour - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    write(1,buff,strlen(buff));
+    if(keep_track->ing[0] == 'F'){
+      keep_track->ing[0] = 'E';
+    }  
+    else{
+      keep_track->ing[1] = 'E'; 
+    }  
+    sprintf(buff,"chef2 (pid %d) is preparing the dessert - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    write(1,buff,strlen(buff));
+
+    count_dessert++;
+    sprintf(buff,"chef2 (pid %d) has delivered the dessert - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    write(1,buff,strlen(buff));
     sem_post(mutex2);
     sem_post(semAgent);
   }
 }
 void chef3_func(){
+  char buff[256];
+  int count_dessert=0;
   while(True){
-    printf("Chef3 %d waiting ingredients \n",getpid());
+    sprintf(buff,"chef3 (pid %d) is waiting for Milk and Flour\n",getpid());
+    write(1,buff,strlen(buff));
     sem_wait(chef3);
     sem_wait(mutex2);
-    printf("Child pid %d ingredients %d %d \n",getpid(),keep_track->ing[0],keep_track->ing[1]);
-    keep_track->ing[0] = Empty;
-    keep_track->ing[1] = Empty;
-    printf("Child pid %d ingredients %d %d \n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    sprintf(buff,"chef3 (pid %d) has taken the Milk - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    write(1,buff,strlen(buff));
+    if(keep_track->ing[0] == 'M'){
+      keep_track->ing[0] = 'E';
+    }  
+    else{
+      keep_track->ing[1] = 'E'; 
+    }  
+
+    sprintf(buff,"chef3 (pid %d) has taken the Flour - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    write(1,buff,strlen(buff));
+    if(keep_track->ing[0] == 'F'){
+      keep_track->ing[0] = 'E';
+    }  
+    else{
+      keep_track->ing[1] = 'E'; 
+    }  
+    sprintf(buff,"chef3 (pid %d) is preparing the dessert - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    write(1,buff,strlen(buff));
+
+    count_dessert++;
+
+    sprintf(buff,"chef3 (pid %d) has delivered the dessert - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    write(1,buff,strlen(buff));
     sem_post(mutex2);
     sem_post(semAgent);
   }
 }
 
 void chef4_func(){
+  char buff[256];
+  int count_dessert=0;
   while(True){
-    printf("Chef4 %d waiting ingredients \n",getpid());
+    sprintf(buff,"chef4 (pid %d) is waiting for Milk and Walnuts\n",getpid());
+    write(1,buff,strlen(buff));
     sem_wait(chef4);
     sem_wait(mutex2);
-    printf("Child pid %d ingredients %d %d \n",getpid(),keep_track->ing[0],keep_track->ing[1]);
-    keep_track->ing[0] = Empty;
-    keep_track->ing[1] = Empty;
-    printf("Child pid %d ingredients %d %d \n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    sprintf(buff,"chef4 (pid %d) has taken the Milk - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    write(1,buff,strlen(buff));
+    if(keep_track->ing[0] == 'M'){
+      keep_track->ing[0] = 'E';
+    }  
+    else{
+      keep_track->ing[1] = 'E'; 
+    }  
+
+    sprintf(buff,"chef4 (pid %d) has taken the Walnuts - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    write(1,buff,strlen(buff));
+    if(keep_track->ing[0] == 'W'){
+      keep_track->ing[0] = 'E';
+    }  
+    else{
+      keep_track->ing[1] = 'E'; 
+    }  
+    sprintf(buff,"chef4 (pid %d) is preparing the dessert - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    write(1,buff,strlen(buff));
+
+    count_dessert++;
+
+    sprintf(buff,"chef4 (pid %d) has delivered the dessert - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    write(1,buff,strlen(buff));
     sem_post(mutex2);
     sem_post(semAgent);
   }
 }
 void chef5_func(){
+  char buff[256];
+  int count_dessert=0;
   while(True){
-    printf("Chef5 %d waiting ingredients \n",getpid());
+    sprintf(buff,"chef5 (pid %d) is waiting for Sugar and Milk\n",getpid());
+    write(1,buff,strlen(buff));
     sem_wait(chef5);
     sem_wait(mutex2);
-    printf("Child pid %d ingredients %d %d \n",getpid(),keep_track->ing[0],keep_track->ing[1]);
-    keep_track->ing[0] = Empty;
-    keep_track->ing[1] = Empty;
-    printf("Child pid %d ingredients %d %d \n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    sprintf(buff,"chef5 (pid %d) has taken the Sugar - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    write(1,buff,strlen(buff));
+    if(keep_track->ing[0] == 'S'){
+      keep_track->ing[0] = 'E';
+    } 
+    else{
+      keep_track->ing[1] = 'E'; 
+    }  
+
+    sprintf(buff,"chef5 (pid %d) has taken the Milk - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    write(1,buff,strlen(buff));
+    if(keep_track->ing[0] == 'M'){
+      keep_track->ing[0] = 'E';
+    }  
+    else{
+      keep_track->ing[1] = 'E'; 
+    }
+    sprintf(buff,"chef5 (pid %d) is preparing the dessert - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    write(1,buff,strlen(buff));
+
+    count_dessert++;
+
+    sprintf(buff,"chef5 (pid %d) has delivered the dessert - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+    write(1,buff,strlen(buff));
     sem_post(mutex2);
     sem_post(semAgent);
   }
@@ -576,8 +719,8 @@ void initilizeshared(){
     keep_track->isFlour = 0;
     keep_track->isSugar = 0;
     keep_track->isWalnut=0;
-    keep_track->ing[0] = Empty;
-    keep_track->ing[1] = Empty;
+    keep_track->ing[0] = 'E';
+    keep_track->ing[1] = 'E';
     close(memFd);
 }
 
@@ -590,35 +733,35 @@ void destroy_shared(){
 
 
 
-int pick_ingredient(char f,char s, ingredient *first,ingredient *second){
+int pick_ingredient(char f,char s, char *first,char *second){
   switch(f){
     case 'M':
-        *first = Milk;
+        *first = 'M';
          break;
     case 'F':
-        *first = Flour;
+        *first = 'F';
          break;
     case 'W':
-        *first = Walnut;
+        *first = 'W';
         break; 
     case 'S':
-        *first = Sugar;
+        *first = 'S';
         break; 
     default:
         return -1;
   }
   switch(s){
     case 'M':
-        *second = Milk;
+        *second = 'M';
          break;
     case 'F':
-        *second = Flour;
+        *second = 'F';
          break;
     case 'W':
-        *second = Walnut;
+        *second = 'W';
         break; 
     case 'S':
-        *second = Sugar;
+        *second = 'S';
         break; 
     default:
         return -1;
