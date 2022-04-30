@@ -67,6 +67,9 @@ int main(int argc, char *argv[]){
     char first,second;
     char buff[256];
     int value1=0;
+    pid_t childPid;
+    int status;
+    int total_dessert=0;
 
     while ((c = getopt (argc, argv, "i:n:")) != -1){
       switch (c){
@@ -127,11 +130,73 @@ int main(int argc, char *argv[]){
         write(1,buff,strlen(buff));
         sem_post(semAgent);
     }
-
+    
+    
     for(i = 0;i <10; i++){
-      wait(NULL);
-    }
+      sem_post(mutex2);
+      if(i == 0){
+        sem_post(semMilk);
+        wait(NULL);
+      }
+      else if(i == 1){
+        sem_post(semFlour);
+        wait(NULL);
+      }
+      else if (i == 2){
+        sem_post(semWalnut);
+        wait(NULL);
+      }
+      else if(i == 3){
+        sem_post(semSugar);
+        wait(NULL);
+      }
+      else if (i == 4){
+        sem_post(chef0);
+        if ((childPid = waitpid(-1, &status, 0)) == -1 ){
+          exitInf("waitpid error");
+        }
+        total_dessert += WEXITSTATUS(status);
 
+      }
+      else if (i == 5){
+        sem_post(chef1);
+        if ((childPid = waitpid(-1, &status, 0)) == -1 ){
+          exitInf("waitpid error");
+        }
+        total_dessert += WEXITSTATUS(status);
+      }
+      else if (i == 6){
+        sem_post(chef2);
+        if ((childPid = waitpid(-1, &status, 0)) == -1 ){
+          exitInf("waitpid error");
+        }
+        total_dessert += WEXITSTATUS(status);
+      }
+      else if (i == 7){
+        sem_post(chef3);
+        if ((childPid = waitpid(-1, &status, 0)) == -1 ){
+          exitInf("waitpid error");
+        }
+        total_dessert += WEXITSTATUS(status);
+      }
+      else if (i == 8){
+        sem_post(chef4);
+        if ((childPid = waitpid(-1, &status, 0)) == -1 ){
+          exitInf("waitpid error");
+        }
+        total_dessert += WEXITSTATUS(status);
+      }
+      else if (i == 9){
+        sem_post(chef5);
+        if ((childPid = waitpid(-1, &status, 0)) == -1 ){
+          exitInf("waitpid error");
+        }
+        total_dessert += WEXITSTATUS(status);
+      }
+    }
+    sprintf(buff,"the wholesaler (pid %d) is done (total desserts: %d)\n",getpid(),total_dessert);
+    write(1,buff,strlen(buff));
+    
     destroy_shared();
     destroy_semaphores();
     close_file(fd);
@@ -141,8 +206,13 @@ int main(int argc, char *argv[]){
 
 
 void pusher1(){
+  int value;
   while(True){
     sem_wait(semMilk);
+    sem_getvalue(mutex2,&value);
+    if(value > 1){
+      break;
+    }
     sem_wait(mutex1);
     sem_wait(mutex2);
     if (keep_track->isFlour == True){
@@ -167,8 +237,13 @@ void pusher1(){
 }
 
 void pusher2(){
+  int value;
   while(True){
     sem_wait(semFlour);
+    sem_getvalue(mutex2,&value);
+    if(value > 1){
+      break;
+    }
     sem_wait(mutex1);
     sem_wait(mutex2);
     if (keep_track->isMilk == True){
@@ -192,8 +267,13 @@ void pusher2(){
 }
 
 void pusher3(){
+  int value;
   while(True){
     sem_wait(semWalnut);
+    sem_getvalue(mutex2,&value);
+    if(value > 1){
+      break;
+    }
     sem_wait(mutex1);
     sem_wait(mutex2);
     if (keep_track->isMilk == True){
@@ -216,8 +296,13 @@ void pusher3(){
   } 
 }
 void pusher4(){
+  int value;
   while(True){
     sem_wait(semSugar);
+    sem_getvalue(mutex2,&value);
+    if(value > 1){
+      break;
+    }
     sem_wait(mutex1);
     sem_wait(mutex2);
     if (keep_track->isMilk == True){
@@ -243,10 +328,15 @@ void pusher4(){
 void chef0_func(){
   char buff[256];
   int count_dessert = 0;
+  int value;
   while(True){
     sprintf(buff,"chef0 (pid %d) is waiting for Walnuts and Sugar\n",getpid());
     write(1,buff,strlen(buff));
     sem_wait(chef0);
+    sem_getvalue(mutex2,&value);
+    if(value > 1){
+      break;
+    }
     sem_wait(mutex2);
     sprintf(buff,"chef0 (pid %d) has taken the Walnuts - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
     write(1,buff,strlen(buff));
@@ -274,14 +364,24 @@ void chef0_func(){
     sem_post(mutex2);
     sem_post(semAgent);
   }
+
+  sprintf(buff,"chef0 (pid %d) is exiting\n",getpid());
+  write(1,buff,strlen(buff));
+  exit(count_dessert);
+
 }
 void chef1_func(){
   int count_dessert=0;
   char buff[256];
+  int value;
   while(True){
     sprintf(buff,"chef1 (pid %d) is waiting for Flour and Walnuts\n",getpid());
     write(1,buff,strlen(buff));
     sem_wait(chef1);
+    sem_getvalue(mutex2,&value);
+    if(value > 1){
+      break;
+    }
     sem_wait(mutex2);
     sprintf(buff,"chef1 (pid %d) has taken the Flour - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
     write(1,buff,strlen(buff));
@@ -308,15 +408,24 @@ void chef1_func(){
     sem_post(mutex2);
     sem_post(semAgent);
   }
+
+  sprintf(buff,"chef1 (pid %d) is exiting\n",getpid());
+  write(1,buff,strlen(buff));
+  exit(count_dessert);
 }
 
 void chef2_func(){
   int count_dessert=0;
   char buff[256];
+  int value;
   while(True){
     sprintf(buff,"chef2 (pid %d) is waiting for Sugar and Flour\n",getpid());
     write(1,buff,strlen(buff));
     sem_wait(chef2);
+    sem_getvalue(mutex2,&value);
+    if(value > 1){
+      break;
+    }
     sem_wait(mutex2);
     sprintf(buff,"chef2 (pid %d) has taken the Sugar - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
     write(1,buff,strlen(buff));
@@ -343,14 +452,22 @@ void chef2_func(){
     sem_post(mutex2);
     sem_post(semAgent);
   }
+  sprintf(buff,"chef2 (pid %d) is exiting\n",getpid());
+  write(1,buff,strlen(buff));
+  exit(count_dessert);
 }
 void chef3_func(){
   char buff[256];
   int count_dessert=0;
+  int value;
   while(True){
     sprintf(buff,"chef3 (pid %d) is waiting for Milk and Flour\n",getpid());
     write(1,buff,strlen(buff));
     sem_wait(chef3);
+    sem_getvalue(mutex2,&value);
+    if(value > 1){
+      break;
+    }
     sem_wait(mutex2);
     sprintf(buff,"chef3 (pid %d) has taken the Milk - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
     write(1,buff,strlen(buff));
@@ -379,15 +496,23 @@ void chef3_func(){
     sem_post(mutex2);
     sem_post(semAgent);
   }
+  sprintf(buff,"chef3 (pid %d) is exiting\n",getpid());
+  write(1,buff,strlen(buff));
+  exit(count_dessert);
 }
 
 void chef4_func(){
   char buff[256];
   int count_dessert=0;
+  int value;
   while(True){
     sprintf(buff,"chef4 (pid %d) is waiting for Milk and Walnuts\n",getpid());
     write(1,buff,strlen(buff));
     sem_wait(chef4);
+    sem_getvalue(mutex2,&value);
+    if(value > 1){
+      break;
+    }
     sem_wait(mutex2);
     sprintf(buff,"chef4 (pid %d) has taken the Milk - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
     write(1,buff,strlen(buff));
@@ -416,14 +541,22 @@ void chef4_func(){
     sem_post(mutex2);
     sem_post(semAgent);
   }
+  sprintf(buff,"chef4 (pid %d) is exiting\n",getpid());
+  write(1,buff,strlen(buff));
+  exit(count_dessert);
 }
 void chef5_func(){
   char buff[256];
   int count_dessert=0;
+  int value;
   while(True){
     sprintf(buff,"chef5 (pid %d) is waiting for Sugar and Milk\n",getpid());
     write(1,buff,strlen(buff));
     sem_wait(chef5);
+    sem_getvalue(mutex2,&value);
+    if(value > 1){
+      break;
+    }
     sem_wait(mutex2);
     sprintf(buff,"chef5 (pid %d) has taken the Sugar - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
     write(1,buff,strlen(buff));
@@ -452,6 +585,10 @@ void chef5_func(){
     sem_post(mutex2);
     sem_post(semAgent);
   }
+
+  sprintf(buff,"chef5 (pid %d) is exiting\n",getpid());
+  write(1,buff,strlen(buff));
+  exit(count_dessert);
 }
 
 void create_chefs_and_pushers(){
@@ -480,11 +617,9 @@ void create_chefs_and_pushers(){
             }
             else if(i == 4){
               chef0_func();
-              exit(0);
             }
             else if(i == 5){
               chef1_func();
-              exit(0);
             }
             else if(i == 6){
               chef2_func();
@@ -492,15 +627,12 @@ void create_chefs_and_pushers(){
             }
             else if(i == 7){
               chef3_func();
-              exit(0);
             }
             else if(i == 8){
               chef4_func();
-              exit(0);
             }
             else if(i == 9){
               chef5_func();
-              exit(0);
             }
             exit(0);
         default: /* Parent */
