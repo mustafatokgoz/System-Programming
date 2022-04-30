@@ -34,6 +34,7 @@ void create_semaphores();
 void destroy_semaphores();
 int pick_ingredient(char f,char s, char *first,char *second);
 int posting_required_semaphores(char first, char second);
+void print_ingredients(char c);
 void pusher1();
 void pusher2();
 void pusher3();
@@ -113,8 +114,13 @@ int main(int argc, char *argv[]){
           second = 'E';
         }
         sem_wait(mutex2);
-        sprintf(buff,"the wholesaler (pid %d) delivers %c and %c\n",getpid(),first,second);
+        sprintf(buff,"the wholesaler (pid %d) delivers ",getpid());
         write(1,buff,strlen(buff));
+        print_ingredients(first);
+        write(1," and ",5);
+        print_ingredients(second);
+        write(1,"\n",1);
+
         keep_track->ing[0] = first;
         keep_track->ing[1] = second;
         sem_post(mutex2);
@@ -196,7 +202,7 @@ int main(int argc, char *argv[]){
     }
     sprintf(buff,"the wholesaler (pid %d) is done (total desserts: %d)\n",getpid(),total_dessert);
     write(1,buff,strlen(buff));
-    
+
     destroy_shared();
     destroy_semaphores();
     close_file(fd);
@@ -900,6 +906,27 @@ int pick_ingredient(char f,char s, char *first,char *second){
   }
   return 0;
 }
+
+void print_ingredients(char c){
+  char buff[256];
+  switch(c){
+    case 'M':
+         write(1,"Milk",strlen("Milk"));
+         break;
+    case 'F':
+        write(1,"Flour",strlen("Flour"));
+         break;
+    case 'W':
+        write(1,"Walnuts",strlen("Walnuts"));
+        break; 
+    case 'S':
+        write(1,"Sugar",strlen("Sugar"));
+        break; 
+    default:
+        break;
+  }
+}
+
 int posting_required_semaphores(char first,char second){
   switch(first){
     case 'M':
