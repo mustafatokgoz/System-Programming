@@ -35,7 +35,6 @@ void destroy_semaphores();
 int pick_ingredient(char f,char s, char *first,char *second);
 int posting_required_semaphores(char first, char second);
 void print_ingredients(char f,char s,char one, char two);
-void destroy_child_semaphores();
 void pusher1();
 void pusher2();
 void pusher3();
@@ -47,12 +46,14 @@ void chef3_func();
 void chef4_func();
 void chef5_func();
 
+typedef struct unnamed{
+  sem_t semMilk,semFlour,semWalnut,semSugar,chef0,chef1,chef2,chef3,chef4,chef5;
+  sem_t mutex1,mutex2,semAgent;
+}unnamed;
 
 
-sem_t *semMilk,*semFlour,*semWalnut,*semSugar,*chef0,*chef1,*chef2,*chef3,*chef4,*chef5;
-sem_t *mutex1,*mutex2,*semAgent;
 
-
+static unnamed *sem_unnamed;
 static track *keep_track;
 pid_t child_ids[10];
 
@@ -68,7 +69,6 @@ int main(int argc, char *argv[]){
     int fd;
     char first,second;
     char buff[256];
-    int value1=0;
     pid_t childPid;
     int status;
     int total_dessert=0;
@@ -98,31 +98,29 @@ int main(int argc, char *argv[]){
     }
 
     fd = open_file(inputfile);
-    
+
     create_semaphores();
-    
+
     initilizeshared();
 
     create_chefs_and_pushers();
 
     while(readfile_2_char(fd,array) != -1){
 
-        sem_wait(semAgent);
+        sem_wait(&sem_unnamed->semAgent);
         if (pick_ingredient(array[0],array[1],&first,&second) == -1){
           perror("Wrong input file");
           first = 'E';
           second = 'E';
         }
-        sem_wait(mutex2);
-        
-        
+        sem_wait(&sem_unnamed->mutex2);
 
         keep_track->ing[0] = first;
         keep_track->ing[1] = second;
 
         print_ingredients(first,second,keep_track->ing[0],keep_track->ing[1]);
         
-        sem_post(mutex2);
+        sem_post(&sem_unnamed->mutex2);
         if (posting_required_semaphores(first,second) == -1){
           perror("posting error");
           break;
@@ -130,33 +128,33 @@ int main(int argc, char *argv[]){
         sprintf(buff,"the wholesaler (pid %d) is waiting for the dessert\n",getpid());
         write(1,buff,strlen(buff));
 
-        sem_wait(semAgent);
+        sem_wait(&sem_unnamed->semAgent);
         sprintf(buff,"the wholesaler (pid %d) has obtained the dessert and left\n",getpid());
         write(1,buff,strlen(buff));
-        sem_post(semAgent);
+        sem_post(&sem_unnamed->semAgent);
     }
     
     
     for(i = 0;i <10; i++){
-      sem_post(mutex2);
+      sem_post(&sem_unnamed->mutex2);
       if(i == 0){
-        sem_post(semMilk);
+        sem_post(&sem_unnamed->semMilk);
         wait(NULL);
       }
       else if(i == 1){
-        sem_post(semFlour);
+        sem_post(&sem_unnamed->semFlour);
         wait(NULL);
       }
       else if (i == 2){
-        sem_post(semWalnut);
+        sem_post(&sem_unnamed->semWalnut);
         wait(NULL);
       }
       else if(i == 3){
-        sem_post(semSugar);
+        sem_post(&sem_unnamed->semSugar);
         wait(NULL);
       }
       else if (i == 4){
-        sem_post(chef0);
+        sem_post(&sem_unnamed->chef0);
         if ((childPid = waitpid(-1, &status, 0)) == -1 ){
           exitInf("waitpid error");
         }
@@ -164,35 +162,35 @@ int main(int argc, char *argv[]){
 
       }
       else if (i == 5){
-        sem_post(chef1);
+        sem_post(&sem_unnamed->chef1);
         if ((childPid = waitpid(-1, &status, 0)) == -1 ){
           exitInf("waitpid error");
         }
         total_dessert += WEXITSTATUS(status);
       }
       else if (i == 6){
-        sem_post(chef2);
+        sem_post(&sem_unnamed->chef2);
         if ((childPid = waitpid(-1, &status, 0)) == -1 ){
           exitInf("waitpid error");
         }
         total_dessert += WEXITSTATUS(status);
       }
       else if (i == 7){
-        sem_post(chef3);
+        sem_post(&sem_unnamed->chef3);
         if ((childPid = waitpid(-1, &status, 0)) == -1 ){
           exitInf("waitpid error");
         }
         total_dessert += WEXITSTATUS(status);
       }
       else if (i == 8){
-        sem_post(chef4);
+        sem_post(&sem_unnamed->chef4);
         if ((childPid = waitpid(-1, &status, 0)) == -1 ){
           exitInf("waitpid error");
         }
         total_dessert += WEXITSTATUS(status);
       }
       else if (i == 9){
-        sem_post(chef5);
+        sem_post(&sem_unnamed->chef5);
         if ((childPid = waitpid(-1, &status, 0)) == -1 ){
           exitInf("waitpid error");
         }
@@ -213,30 +211,30 @@ int main(int argc, char *argv[]){
 void pusher1(){
   int value;
   while(True){
-    sem_wait(semMilk);
-    sem_getvalue(mutex2,&value);
+    sem_wait(&sem_unnamed->semMilk);
+    sem_getvalue(&sem_unnamed->mutex2,&value);
     if(value > 1){
       break;
     }
-    sem_wait(mutex1);
-    sem_wait(mutex2);
+    sem_wait(&sem_unnamed->mutex1);
+    sem_wait(&sem_unnamed->mutex2);
     if (keep_track->isFlour == True){
         keep_track->isFlour=False;
-        sem_post(chef3);
+        sem_post(&sem_unnamed->chef3);
     }    
     else if (keep_track->isSugar == True){
         keep_track->isSugar=False;
-        sem_post(chef5);
+        sem_post(&sem_unnamed->chef5);
     }
     else if (keep_track->isWalnut == True){
         keep_track->isWalnut=False;
-        sem_post(chef4);
+        sem_post(&sem_unnamed->chef4);
     }
     else{
         keep_track->isMilk = True;
     }
-    sem_post(mutex2);
-    sem_post(mutex1);
+    sem_post(&sem_unnamed->mutex2);
+    sem_post(&sem_unnamed->mutex1);
   } 
 
 }
@@ -244,89 +242,89 @@ void pusher1(){
 void pusher2(){
   int value;
   while(True){
-    sem_wait(semFlour);
-    sem_getvalue(mutex2,&value);
+    sem_wait(&sem_unnamed->semFlour);
+    sem_getvalue(&sem_unnamed->mutex2,&value);
     if(value > 1){
       break;
     }
-    sem_wait(mutex1);
-    sem_wait(mutex2);
+    sem_wait(&sem_unnamed->mutex1);
+    sem_wait(&sem_unnamed->mutex2);
     if (keep_track->isMilk == True){
         keep_track->isMilk=False;
-        sem_post(chef3);
+        sem_post(&sem_unnamed->chef3);
     }    
     else if (keep_track->isSugar == True){
         keep_track->isSugar=False;
-        sem_post(chef2);
+        sem_post(&sem_unnamed->chef2);
     }
     else if (keep_track->isWalnut == True){
         keep_track->isWalnut=False;
-        sem_post(chef1);
+        sem_post(&sem_unnamed->chef1);
     }
     else{
         keep_track->isFlour = True;
     }
-    sem_post(mutex2);
-    sem_post(mutex1);
+    sem_post(&sem_unnamed->mutex2);
+    sem_post(&sem_unnamed->mutex1);
   } 
 }
 
 void pusher3(){
   int value;
   while(True){
-    sem_wait(semWalnut);
-    sem_getvalue(mutex2,&value);
+    sem_wait(&sem_unnamed->semWalnut);
+    sem_getvalue(&sem_unnamed->mutex2,&value);
     if(value > 1){
       break;
     }
-    sem_wait(mutex1);
-    sem_wait(mutex2);
+    sem_wait(&sem_unnamed->mutex1);
+    sem_wait(&sem_unnamed->mutex2);
     if (keep_track->isMilk == True){
         keep_track->isMilk=False;
-        sem_post(chef4);
+        sem_post(&sem_unnamed->chef4);
     }    
     else if (keep_track->isSugar == True){
         keep_track->isSugar=False;
-        sem_post(chef0);
+        sem_post(&sem_unnamed->chef0);
     }
     else if (keep_track->isFlour == True){
         keep_track->isFlour=False;
-        sem_post(chef1);
+        sem_post(&sem_unnamed->chef1);
     }
     else{
         keep_track->isWalnut = True;
     }
-    sem_post(mutex2);
-    sem_post(mutex1);
+    sem_post(&sem_unnamed->mutex2);
+    sem_post(&sem_unnamed->mutex1);
   } 
 }
 void pusher4(){
   int value;
   while(True){
-    sem_wait(semSugar);
-    sem_getvalue(mutex2,&value);
+    sem_wait(&sem_unnamed->semSugar);
+    sem_getvalue(&sem_unnamed->mutex2,&value);
     if(value > 1){
       break;
     }
-    sem_wait(mutex1);
-    sem_wait(mutex2);
+    sem_wait(&sem_unnamed->mutex1);
+    sem_wait(&sem_unnamed->mutex2);
     if (keep_track->isMilk == True){
         keep_track->isMilk=False;
-        sem_post(chef5);
+        sem_post(&sem_unnamed->chef5);
     }    
     else if (keep_track->isWalnut == True){
         keep_track->isWalnut=False;
-        sem_post(chef0);
+        sem_post(&sem_unnamed->chef0);
     }
     else if (keep_track->isFlour == True){
         keep_track->isFlour=False;
-        sem_post(chef2);
+        sem_post(&sem_unnamed->chef2);
     }
     else{
         keep_track->isSugar = True;
     }
-    sem_post(mutex2);
-    sem_post(mutex1);
+    sem_post(&sem_unnamed->mutex2);
+    sem_post(&sem_unnamed->mutex1);
   } 
 }
 
@@ -337,12 +335,12 @@ void chef0_func(){
   while(True){
     sprintf(buff,"chef0 (pid %d) is waiting for Walnuts and Sugar\n",getpid());
     write(1,buff,strlen(buff));
-    sem_wait(chef0);
-    sem_getvalue(mutex2,&value);
+    sem_wait(&sem_unnamed->chef0);
+    sem_getvalue(&sem_unnamed->mutex2,&value);
     if(value > 1){
       break;
     }
-    sem_wait(mutex2);
+    sem_wait(&sem_unnamed->mutex2);
     
     if(keep_track->ing[0] == 'W'){
       keep_track->ing[0] = 'E';
@@ -370,13 +368,12 @@ void chef0_func(){
     sprintf(buff,"chef0 (pid %d) has delivered the dessert - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
     write(1,buff,strlen(buff));
 
-    sem_post(mutex2);
-    sem_post(semAgent);
+    sem_post(&sem_unnamed->mutex2);
+    sem_post(&sem_unnamed->semAgent);
   }
 
   sprintf(buff,"chef0 (pid %d) is exiting\n",getpid());
   write(1,buff,strlen(buff));
-  destroy_child_semaphores();
   exit(count_dessert);
 
 }
@@ -387,12 +384,12 @@ void chef1_func(){
   while(True){
     sprintf(buff,"chef1 (pid %d) is waiting for Flour and Walnuts\n",getpid());
     write(1,buff,strlen(buff));
-    sem_wait(chef1);
-    sem_getvalue(mutex2,&value);
+    sem_wait(&sem_unnamed->chef1);
+    sem_getvalue(&sem_unnamed->mutex2,&value);
     if(value > 1){
       break;
     }
-    sem_wait(mutex2);
+    sem_wait(&sem_unnamed->mutex2);
     
     if(keep_track->ing[0] == 'F'){
       keep_track->ing[0] = 'E';
@@ -421,13 +418,12 @@ void chef1_func(){
     count_dessert++;
     sprintf(buff,"chef1 (pid %d) has delivered the dessert - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
     write(1,buff,strlen(buff));
-    sem_post(mutex2);
-    sem_post(semAgent);
+    sem_post(&sem_unnamed->mutex2);
+    sem_post(&sem_unnamed->semAgent);
   }
 
   sprintf(buff,"chef1 (pid %d) is exiting\n",getpid());
   write(1,buff,strlen(buff));
-  destroy_child_semaphores();
   exit(count_dessert);
 }
 
@@ -438,12 +434,12 @@ void chef2_func(){
   while(True){
     sprintf(buff,"chef2 (pid %d) is waiting for Sugar and Flour\n",getpid());
     write(1,buff,strlen(buff));
-    sem_wait(chef2);
-    sem_getvalue(mutex2,&value);
+    sem_wait(&sem_unnamed->chef2);
+    sem_getvalue(&sem_unnamed->mutex2,&value);
     if(value > 1){
       break;
     }
-    sem_wait(mutex2);
+    sem_wait(&sem_unnamed->mutex2);
     
     if(keep_track->ing[0] == 'S'){
       keep_track->ing[0] = 'E';
@@ -473,12 +469,11 @@ void chef2_func(){
     count_dessert++;
     sprintf(buff,"chef2 (pid %d) has delivered the dessert - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
     write(1,buff,strlen(buff));
-    sem_post(mutex2);
-    sem_post(semAgent);
+    sem_post(&sem_unnamed->mutex2);
+    sem_post(&sem_unnamed->semAgent);
   }
   sprintf(buff,"chef2 (pid %d) is exiting\n",getpid());
   write(1,buff,strlen(buff));
-  destroy_child_semaphores();
   exit(count_dessert);
 }
 void chef3_func(){
@@ -488,12 +483,12 @@ void chef3_func(){
   while(True){
     sprintf(buff,"chef3 (pid %d) is waiting for Milk and Flour\n",getpid());
     write(1,buff,strlen(buff));
-    sem_wait(chef3);
-    sem_getvalue(mutex2,&value);
+    sem_wait(&sem_unnamed->chef3);
+    sem_getvalue(&sem_unnamed->mutex2,&value);
     if(value > 1){
       break;
     }
-    sem_wait(mutex2);
+    sem_wait(&sem_unnamed->mutex2);
     
     if(keep_track->ing[0] == 'M'){
       keep_track->ing[0] = 'E';
@@ -523,12 +518,11 @@ void chef3_func(){
 
     sprintf(buff,"chef3 (pid %d) has delivered the dessert - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
     write(1,buff,strlen(buff));
-    sem_post(mutex2);
-    sem_post(semAgent);
+    sem_post(&sem_unnamed->mutex2);
+    sem_post(&sem_unnamed->semAgent);
   }
   sprintf(buff,"chef3 (pid %d) is exiting\n",getpid());
   write(1,buff,strlen(buff));
-  destroy_child_semaphores();
   exit(count_dessert);
 }
 
@@ -539,12 +533,12 @@ void chef4_func(){
   while(True){
     sprintf(buff,"chef4 (pid %d) is waiting for Milk and Walnuts\n",getpid());
     write(1,buff,strlen(buff));
-    sem_wait(chef4);
-    sem_getvalue(mutex2,&value);
+    sem_wait(&sem_unnamed->chef4);
+    sem_getvalue(&sem_unnamed->mutex2,&value);
     if(value > 1){
       break;
     }
-    sem_wait(mutex2);
+    sem_wait(&sem_unnamed->mutex2);
     
     if(keep_track->ing[0] == 'M'){
       keep_track->ing[0] = 'E';
@@ -573,12 +567,11 @@ void chef4_func(){
 
     sprintf(buff,"chef4 (pid %d) has delivered the dessert - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
     write(1,buff,strlen(buff));
-    sem_post(mutex2);
-    sem_post(semAgent);
+    sem_post(&sem_unnamed->mutex2);
+    sem_post(&sem_unnamed->semAgent);
   }
   sprintf(buff,"chef4 (pid %d) is exiting\n",getpid());
   write(1,buff,strlen(buff));
-  destroy_child_semaphores();
   exit(count_dessert);
 }
 void chef5_func(){
@@ -588,12 +581,12 @@ void chef5_func(){
   while(True){
     sprintf(buff,"chef5 (pid %d) is waiting for Sugar and Milk\n",getpid());
     write(1,buff,strlen(buff));
-    sem_wait(chef5);
-    sem_getvalue(mutex2,&value);
+    sem_wait(&sem_unnamed->chef5);
+    sem_getvalue(&sem_unnamed->mutex2,&value);
     if(value > 1){
       break;
     }
-    sem_wait(mutex2);
+    sem_wait(&sem_unnamed->mutex2);
     if(keep_track->ing[0] == 'S'){
       keep_track->ing[0] = 'E';
     } 
@@ -621,13 +614,12 @@ void chef5_func(){
 
     sprintf(buff,"chef5 (pid %d) has delivered the dessert - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
     write(1,buff,strlen(buff));
-    sem_post(mutex2);
-    sem_post(semAgent);
+    sem_post(&sem_unnamed->mutex2);
+    sem_post(&sem_unnamed->semAgent);
   }
 
   sprintf(buff,"chef5 (pid %d) is exiting\n",getpid());
   write(1,buff,strlen(buff));
-  destroy_child_semaphores();
   exit(count_dessert);
 }
 
@@ -640,22 +632,18 @@ void create_chefs_and_pushers(){
         case 0: /* Child */
             if(i == 0){
               pusher1();
-              destroy_child_semaphores();
               exit(0);
             }
             else if(i == 1){
               pusher2();
-              destroy_child_semaphores();
               exit(0);
             }
             else if(i == 2){
               pusher3();
-              destroy_child_semaphores();
               exit(0);
             }
             else if(i == 3){
               pusher4();
-              destroy_child_semaphores();
               exit(0);
             }
             else if(i == 4){
@@ -718,172 +706,97 @@ int readfile_2_char(int fd,char array[]){
 }
 
 void create_semaphores(){
-    semMilk = sem_open("milk_semaphore", O_CREAT , 0644, 0);
-    if (semMilk == SEM_FAILED)
-    {
-      exitInf("semaphore");
+    mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH | S_IRWXU;
+    char memoryName[25];
+    strcpy(memoryName,"unnamed_semaphore");
+    shm_unlink(memoryName);
+    int memFd = shm_open(memoryName, O_RDWR | O_CREAT , mode);
+    if (memFd == -1)
+        exitInf("shm_open error!");
+    if (ftruncate(memFd, sizeof(*sem_unnamed)) == -1)  
+        exitInf("ftruncate error");
+
+    sem_unnamed = (unnamed *)mmap(NULL, sizeof(*sem_unnamed), PROT_READ | PROT_WRITE, MAP_SHARED, memFd, 0);
+    if (sem_unnamed == MAP_FAILED)
+        exitInf("mmap");
+    
+    if (sem_init(&sem_unnamed->semMilk,1,0) < 0){
+        perror("semaphore initilization error");
     }
-    semFlour = sem_open("flour_semaphore", O_CREAT , 0644, 0);
-    if (semFlour == SEM_FAILED)
-    {
-      exitInf("semaphore");
+    perror("heyy1");
+    if (sem_init(&sem_unnamed->semFlour,1,0) < 0){
+        perror("semaphore initilization error");
     }
-    semWalnut = sem_open("walnut_semaphore", O_CREAT, 0644, 0);
-    if (semWalnut == SEM_FAILED)
-    {
-      exitInf("semaphore");
+    if (sem_init(&sem_unnamed->semWalnut,1,0) < 0){
+        perror("semaphore initilization error");
     }
-    semSugar = sem_open("sugar_semaphore", O_CREAT, 0644, 0);
-    if (semSugar == SEM_FAILED)
-    {
-      exitInf("semaphore");
+    if (sem_init(&sem_unnamed->semSugar,1,0) < 0){
+        perror("semaphore initilization error");
     }
-    chef0 = sem_open("chef0_semaphore", O_CREAT , 0644, 0);
-    if (chef0 == SEM_FAILED)
-    {
-      exitInf("semaphore");
+    if (sem_init(&sem_unnamed->chef0,1,0) < 0){
+        perror("semaphore initilization error");
     }
-    chef1 = sem_open("chef1_semaphore", O_CREAT , 0644, 0);
-    if (chef1 == SEM_FAILED)
-    {
-      exitInf("semaphore");
+    if (sem_init(&sem_unnamed->chef1,1,0) < 0){
+        perror("semaphore initilization error");
     }
-    chef2 = sem_open("chef2_semaphore", O_CREAT, 0644, 0);
-    if (chef2 == SEM_FAILED)
-    {
-      exitInf("semaphore");
+    if (sem_init(&sem_unnamed->chef2,1,0) < 0){
+        perror("semaphore initilization error");
     }
-    chef3 = sem_open("chef3_semaphore", O_CREAT, 0644, 0);
-    if (chef3 == SEM_FAILED)
-    {
-      exitInf("semaphore");
+    if (sem_init(&sem_unnamed->chef3,1,0) < 0){
+        perror("semaphore initilization error");
     }
-    chef4 = sem_open("chef4_semaphore", O_CREAT , 0644, 0);
-    if (chef1 == SEM_FAILED)
-    {
-      exitInf("semaphore");
+    if (sem_init(&sem_unnamed->chef4,1,0) < 0){
+        perror("semaphore initilization error");
     }
-    chef5 = sem_open("chef5_semaphore", O_CREAT, 0644, 0);
-    if (chef2 == SEM_FAILED)
-    {
-      exitInf("semaphore");
+    if (sem_init(&sem_unnamed->chef5,1,0) < 0){
+        perror("semaphore initilization error");
     }
-    mutex1 = sem_open("mutex1", O_CREAT, 0644, 1);
-    if (mutex1 == SEM_FAILED)
-    {
-      exitInf("semaphore");
+    if (sem_init(&sem_unnamed->mutex1,1,1) < 0){
+        perror("semaphore initilization error");
     }
-    mutex2 = sem_open("mutex2", O_CREAT, 0644, 1);
-    if (mutex2 == SEM_FAILED)
-    {
-      exitInf("semaphore");
+    if (sem_init(&sem_unnamed->mutex2,1,1) < 0){
+        perror("semaphore initilization error");
     }
-    semAgent = sem_open(agent_name, O_CREAT, 0644, 1);
-    if (semAgent == SEM_FAILED)
-    {
-      exitInf("semaphore");
+    if (sem_init(&sem_unnamed->semAgent,1,1) < 0){
+        perror("semaphore initilization error");
     }
+    close(memFd);
 }
 
 void destroy_semaphores(){
-  if (sem_close(semMilk) == -1)
+  if (sem_destroy(&sem_unnamed->semMilk) == -1)
       exitInf("sem close");
-  if (sem_close(semFlour) == -1)
+  if (sem_destroy(&sem_unnamed->semFlour) == -1)
       exitInf("sem close");
-  if (sem_close(semWalnut) == -1)
+  if (sem_destroy(&sem_unnamed->semWalnut) == -1)
       exitInf("sem close");
-  if (sem_close(semSugar) == -1)
+  if (sem_destroy(&sem_unnamed->semSugar) == -1)
       exitInf("sem close");
-  if (sem_close(chef0) == -1)
+  if (sem_destroy(&sem_unnamed->chef0) == -1)
       exitInf("sem close");
-  if (sem_close(chef1) == -1)
+  if (sem_destroy(&sem_unnamed->chef1) == -1)
       exitInf("sem close");
-  if (sem_close(chef2) == -1)
+  if (sem_destroy(&sem_unnamed->chef2) == -1)
       exitInf("sem close");
-  if (sem_close(chef3) == -1)
+  if (sem_destroy(&sem_unnamed->chef3) == -1)
       exitInf("sem close");
-  if (sem_close(chef4) == -1)
+  if (sem_destroy(&sem_unnamed->chef4) == -1)
       exitInf("sem close");
-  if (sem_close(chef5) == -1)
-      exitInf("sem close"); 
-  if (sem_close(mutex1) == -1)
+  if (sem_destroy(&sem_unnamed->chef5) == -1)
       exitInf("sem close");
-  if (sem_close(mutex2) == -1)
+  if (sem_destroy(&sem_unnamed->mutex1) == -1)
       exitInf("sem close");
-  if (sem_close(semAgent) == -1)
-      exitInf("sem close");    
- 
-  if (sem_unlink("milk_semaphore") == -1){
-      exitInf("unlink error");
-  }
-  if (sem_unlink("flour_semaphore") == -1){
-      exitInf("unlink error");
-  }
-  if (sem_unlink("walnut_semaphore") == -1){
-      exitInf("unlink error");
-  }
-  if (sem_unlink("sugar_semaphore") == -1){
-      exitInf("unlink error");
-  }
-  if (sem_unlink("chef0_semaphore") == -1){
-      exitInf("unlink error");
-  }
-  if (sem_unlink("chef1_semaphore") == -1){
-      exitInf("unlink error");
-  }
-  if (sem_unlink("chef2_semaphore") == -1){
-      exitInf("unlink error");
-  }
-  if (sem_unlink("chef3_semaphore") == -1){
-      exitInf("unlink error");
-  }
-  if (sem_unlink("chef4_semaphore") == -1){
-      exitInf("unlink error");
-  }
-  if (sem_unlink("chef5_semaphore") == -1){
-      exitInf("unlink error");
-  }
-  if (sem_unlink("mutex1") == -1){
-      exitInf("unlink error");
-  }
-  if (sem_unlink("mutex2") == -1){
-      exitInf("unlink error");
-  }
-  if (sem_unlink(agent_name) == -1){
-      exitInf("unlink error");
-  }
+  if (sem_destroy(&sem_unnamed->mutex2) == -1)
+      exitInf("sem close");
+  if (sem_destroy(&sem_unnamed->semAgent) == -1)
+      exitInf("sem close");  
+
+
+  char memoryName[25];
+  strcpy(memoryName,"unnnamed_semaphore");
+  shm_unlink(memoryName);     
 }
 
-
-void destroy_child_semaphores(){
-  if (sem_close(semMilk) == -1)
-      exitInf("sem close");
-  if (sem_close(semFlour) == -1)
-      exitInf("sem close");
-  if (sem_close(semWalnut) == -1)
-      exitInf("sem close");
-  if (sem_close(semSugar) == -1)
-      exitInf("sem close");
-  if (sem_close(chef0) == -1)
-      exitInf("sem close");
-  if (sem_close(chef1) == -1)
-      exitInf("sem close");
-  if (sem_close(chef2) == -1)
-      exitInf("sem close");
-  if (sem_close(chef3) == -1)
-      exitInf("sem close");
-  if (sem_close(chef4) == -1)
-      exitInf("sem close");
-  if (sem_close(chef5) == -1)
-      exitInf("sem close");    
-  if (sem_close(mutex1) == -1)
-      exitInf("sem close");
-  if (sem_close(mutex2) == -1)
-      exitInf("sem close");
-  if (sem_close(semAgent) == -1)
-      exitInf("sem close"); 
- 
-}  
 
 void lock_file(int fd, struct flock fl){
     fl.l_type = F_WRLCK;
@@ -1015,16 +928,16 @@ void print_ingredients(char f,char s,char one,char two){
 int posting_required_semaphores(char first,char second){
   switch(first){
     case 'M':
-        sem_post(semMilk);
+        sem_post(&sem_unnamed->semMilk);
          break;
     case 'F':
-        sem_post(semFlour);
+        sem_post(&sem_unnamed->semFlour);
          break;
     case 'W':
-        sem_post(semWalnut);
+        sem_post(&sem_unnamed->semWalnut);
         break; 
     case 'S':
-        sem_post(semSugar);
+        sem_post(&sem_unnamed->semSugar);
         break; 
     default:
         return -1;
@@ -1032,28 +945,28 @@ int posting_required_semaphores(char first,char second){
   switch(second){
     case 'M':
         if(first!='M')
-          sem_post(semMilk);
+          sem_post(&sem_unnamed->semMilk);
         else{
           return -1;
         }  
         break;
     case 'F':
         if(first!='F')
-          sem_post(semFlour);
+          sem_post(&sem_unnamed->semFlour);
         else{
           return -1;
         }  
         break;
     case 'W':
         if(first!='W')
-          sem_post(semWalnut);
+          sem_post(&sem_unnamed->semWalnut);
         else{
           return -1;
         }  
         break; 
     case 'S':
         if(first!='S')
-          sem_post(semSugar);
+          sem_post(&sem_unnamed->semSugar);
         else{
           return -1;
         }
