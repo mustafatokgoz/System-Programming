@@ -113,22 +113,20 @@ int main(int argc, char *argv[]){
           second = ' ';
         }
         sem_wait(mutex2);
-        
-        
-
         keep_track->ing[0] = first;
         keep_track->ing[1] = second;
 
         print_ingredients(first,second,keep_track->ing[0],keep_track->ing[1]);
         
         sem_post(mutex2);
+
+        sprintf(buff,"the wholesaler (pid %d) is waiting for the dessert - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
+        write(1,buff,strlen(buff));
+
         if (posting_required_semaphores(first,second) == -1){
           perror("posting error");
           break;
         }
-        sprintf(buff,"the wholesaler (pid %d) is waiting for the dessert - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
-        write(1,buff,strlen(buff));
-
         sem_wait(semAgent);
         sprintf(buff,"the wholesaler (pid %d) has obtained the dessert and left - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
         write(1,buff,strlen(buff));
@@ -334,8 +332,10 @@ void chef0_func(){
   int count_dessert = 0;
   int value;
   while(True){
+    sem_wait(mutex2);
     sprintf(buff,"chef0 (pid %d) is waiting for Walnuts and Sugar - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
     write(1,buff,strlen(buff));
+    sem_post(mutex2);
     sem_wait(chef0);
     sem_getvalue(mutex2,&value);
     if(value > 1){
@@ -387,8 +387,10 @@ void chef1_func(){
   char buff[256];
   int value;
   while(True){
+    sem_wait(mutex2);
     sprintf(buff,"chef1 (pid %d) is waiting for Flour and Walnuts - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
     write(1,buff,strlen(buff));
+    sem_post(mutex2);
     sem_wait(chef1);
     sem_getvalue(mutex2,&value);
     if(value > 1){
@@ -441,8 +443,10 @@ void chef2_func(){
   char buff[256];
   int value;
   while(True){
+    sem_wait(mutex2);
     sprintf(buff,"chef2 (pid %d) is waiting for Sugar and Flour - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
     write(1,buff,strlen(buff));
+    sem_post(mutex2);
     sem_wait(chef2);
     sem_getvalue(mutex2,&value);
     if(value > 1){
@@ -494,8 +498,10 @@ void chef3_func(){
   int count_dessert=0;
   int value;
   while(True){
+    sem_wait(mutex2);
     sprintf(buff,"chef3 (pid %d) is waiting for Milk and Flour - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
     write(1,buff,strlen(buff));
+    sem_post(mutex2);
     sem_wait(chef3);
     sem_getvalue(mutex2,&value);
     if(value > 1){
@@ -548,8 +554,10 @@ void chef4_func(){
   int count_dessert=0;
   int value;
   while(True){
+    sem_wait(mutex2);
     sprintf(buff,"chef4 (pid %d) is waiting for Milk and Walnuts - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
     write(1,buff,strlen(buff));
+    sem_post(mutex2);
     sem_wait(chef4);
     sem_getvalue(mutex2,&value);
     if(value > 1){
@@ -600,8 +608,10 @@ void chef5_func(){
   int count_dessert=0;
   int value;
   while(True){
+    sem_wait(mutex2);
     sprintf(buff,"chef5 (pid %d) is waiting for Sugar and Milk - (%c %c)\n",getpid(),keep_track->ing[0],keep_track->ing[1]);
     write(1,buff,strlen(buff));
+    sem_post(mutex2);
     sem_wait(chef5);
     sem_getvalue(mutex2,&value);
     if(value > 1){
