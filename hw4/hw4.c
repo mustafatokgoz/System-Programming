@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/sem.h>
 #include <sys/ipc.h>
+#include <signal.h>
 #include "helper.h"
 
 #define COUNT1 0 
@@ -19,6 +20,12 @@ union semun {
 	unsigned short *array;
 };
 
+sig_atomic_t sig_check=0;
+
+
+
+
+
 void lock_file(int fd, struct flock fl);
 void unlock_file(int fd, struct flock fl);
 int getCount(int num);
@@ -26,66 +33,80 @@ void post(int num);
 void wait_two(int num1,int num2);
 char *timestamp();
 
-int Nloop;
+int Nloop,Cnum;
 int semid;
+pthread_t *Ctimes;
+
+void quit_c(){
+  exitInf("\nYour program interrupt with ctrl c from keyboard exitinggg..\n");
+}
+
+/*to handle ctrl c*/
+void signal_handle(int sig) {
+    int j = 0;
+    sig_check=1;
+
+    for(j = 0;j < Cnum; j++){
+        pthread_cancel(Ctimes[j]);
+    }
+    free(Ctimes);
+    quit_c();
+}
+
 
 void *supplier(void* param){
     int rd;
     char c;
     struct flock fl = {F_WRLCK, SEEK_SET,0,0,0};
-    char buff[256];
-    int number1 = 0, number2 = 0;
     int fd = *((int *)(param));
-    int c1,c2,nc1,nc2;
-    char *currenttime;
+    int j;
+    
     pthread_detach(pthread_self());
 
     lock_file(fd,fl);
     rd = read(fd,&c,1);
     while(rd > 0){
+        if(sig_check == 1){
+            unlock_file(fd,fl);
+            close_file(fd);
+            for(j = 0;j < Cnum; j++){
+                pthread_cancel(Ctimes[j]);
+            }
+            free(Ctimes);
+            quit_c();
+        }
         if(c == '1'){
             
             //sprintf(buff,"%s - Supplier: read from input a ‘1’. Current amounts: %d x ‘1’, %d x ‘2’.\n",timestamp(),getCount(COUNT1),getCount(COUNT2));
             //write(1,buff,strlen(buff));
-            
-            c1 = getCount(COUNT1);
-            c2 = getCount(COUNT2);
-            currenttime = timestamp();
+
             fflush(stdout);
-            fprintf(stdout,"%s - Supplier: read from input a ‘1’. Current amounts: %d x ‘1’, %d x ‘2’.\n",currenttime,c1,c2);
+            fprintf(stdout,"%s - Supplier: read from input a ‘1’. Current amounts: %d x ‘1’, %d x ‘2’.\n",timestamp(),getCount(COUNT1),getCount(COUNT2));
             fflush(stdout);
 
-            //number1++;
+           
             post(COUNT1);
-            nc1 = getCount(COUNT1);
-            nc2 = getCount(COUNT2);
-            currenttime = timestamp();
+
             fflush(stdout);
             //sprintf(buff,"%s - Supplier: delivered a ‘1’. Post-delivery amounts: %d x ‘1’, %d x ‘2’.\n",timestamp(),getCount(COUNT1),getCount(COUNT2));
             //write(1,buff,strlen(buff));
-            fprintf(stdout,"%s - Supplier: delivered a ‘1’. Post-delivery amounts: %d x ‘1’, %d x ‘2’.\n",currenttime,nc1,nc2);
+            fprintf(stdout,"%s - Supplier: delivered a ‘1’. Post-delivery amounts: %d x ‘1’, %d x ‘2’.\n",timestamp(),getCount(COUNT1),getCount(COUNT2));
             fflush(stdout);
    
         }
         else if(c == '2'){
             //sprintf(buff,"%s - Supplier: read from input a ‘2’. Current amounts: %d x ‘1’, %d x ‘2’.\n",timestamp(),getCount(COUNT1),getCount(COUNT2));
             //write(1,buff,strlen(buff));
-            c1 = getCount(COUNT1);
-            c2 = getCount(COUNT2);
-            currenttime = timestamp();
             fflush(stdout);
-            fprintf(stdout,"%s - Supplier: read from input a ‘2’. Current amounts: %d x ‘1’, %d x ‘2’.\n",currenttime,c1,c2);
+            fprintf(stdout,"%s - Supplier: read from input a ‘2’. Current amounts: %d x ‘1’, %d x ‘2’.\n",timestamp(),getCount(COUNT1),getCount(COUNT2));
             fflush(stdout);
-            //number2++;
+            
             post(COUNT2);
-
-            nc1 = getCount(COUNT1);
-            nc2 = getCount(COUNT2);
+            fflush(stdout);
             //sprintf(buff,"%s - Supplier: delivered a ‘2’. Post-delivery amounts: %d x ‘1’, %d x ‘2’.\n",timestamp(),getCount(COUNT1),getCount(COUNT2));
             //write(1,buff,strlen(buff));
-            currenttime = timestamp();
-            fflush(stdout);
-            fprintf(stdout,"%s - Supplier: delivered a ‘2’. Post-delivery amounts: %d x ‘1’, %d x ‘2’.\n",currenttime,nc1,nc2);
+
+            fprintf(stdout,"%s - Supplier: delivered a ‘2’. Post-delivery amounts: %d x ‘1’, %d x ‘2’.\n",timestamp(),getCount(COUNT1),getCount(COUNT2));
             fflush(stdout);
         } 
         
@@ -93,8 +114,7 @@ void *supplier(void* param){
     }
     unlock_file(fd,fl);
     fflush(stdout);
-    sprintf(buff,"%s - The Supplier has left.\n",timestamp());
-    write(1,buff,strlen(buff));
+    fprintf(stdout,"%s - The Supplier has left.\n",timestamp());
     fflush(stdout);
 
     pthread_exit(NULL);
@@ -103,36 +123,36 @@ void *supplier(void* param){
 void *consumer(void* param){
     int i = *((int *)(param));
     int j = 0;
-    char buff[256];
-    int c1,c2,nc1,nc2;
-    char *currenttime;
 
     for(j = 0; j < Nloop;j++){
         //sprintf(buff ,"%s - Consumer-%d at iteration %d (waiting). Current amounts: %d x ‘1’, %d x ‘2’.\n",timestamp(),i,j,getCount(COUNT1),getCount(COUNT2));
         //write(1,buff,strlen(buff));
-        
-        c1 = getCount(COUNT1);
-        c2 = getCount(COUNT2);
-        currenttime = timestamp();
+        if(sig_check == 1){
+            for(j = 0;j < Cnum; j++){
+                pthread_cancel(Ctimes[j]);
+            }
+            free(Ctimes);
+            quit_c();
+        }
         fflush(stdout);
-        fprintf(stdout ,"%s - Consumer-%d at iteration %d (waiting). Current amounts: %d x ‘1’, %d x ‘2’.\n",currenttime,i,j,c1,c2);
+
+
+
+        fprintf(stdout ,"%s - Consumer-%d at iteration %d (waiting). Current amounts: %d x ‘1’, %d x ‘2’.\n",timestamp(),i,j,getCount(COUNT1),getCount(COUNT2));
         fflush(stdout);
         // decrese take 1 and 2 
         wait_two(COUNT1,COUNT2);
 
-        nc1 = getCount(COUNT1);
-        nc2 = getCount(COUNT2);
-        currenttime = timestamp();
+        fflush(stdout);
         //sprintf(buff ,"%s - Consumer-%d at iteration %d (consumed). Post-consumption amounts: %d x ‘1’, %d x ‘2’.\n",timestamp(),i,j,getCount(COUNT1),getCount(COUNT2));
         //write(1,buff,strlen(buff));
-        fflush(stdout);
-        fprintf(stdout ,"%s - Consumer-%d at iteration %d (consumed). Current amounts: %d x ‘1’, %d x ‘2’.\n",currenttime,i,j,nc1,nc2);
+        
+        fprintf(stdout ,"%s - Consumer-%d at iteration %d (consumed). Current amounts: %d x ‘1’, %d x ‘2’.\n",timestamp(),i,j,getCount(COUNT1),getCount(COUNT2));
         fflush(stdout);
         
     }
     fflush(stdout);
-    sprintf(buff,"%s - Consumer-%d has left.\n",timestamp(),i);
-    write(1,buff,strlen(buff));
+    fprintf(stdout,"%s - Consumer-%d has left.\n",timestamp(),i);
     fflush(stdout);
     return NULL;
 }
@@ -146,16 +166,21 @@ int main(int argc, char *argv[]){
     char *err_mass = "You should enter the correct command (Example: ./hw4 -C 10 -N 5 -F inputfilePath)\n";
     int fd;
     pthread_t t1;
-    pthread_t *Ctimes;
     key_t keys;
     union semun un[2];
-    char buff[1024];
-   memset( buff, '\0', sizeof( buff ));
-   setvbuf(stdout, buff, _IONBF, 0);
+    struct sigaction sa;
+
+
+    sa.sa_handler = signal_handle;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags=0;
+    sigaction(SIGINT,&sa,NULL);
+
+    setvbuf(stdout, NULL, _IONBF,0);
 
     un[COUNT1].val = 0;
     un[COUNT2].val = 0;
-    srand(time(NULL));
+    //srand(time(NULL));
 
     while ((c = getopt (argc, argv, "C:N:F:")) != -1){
       switch (c){
@@ -181,7 +206,7 @@ int main(int argc, char *argv[]){
           return 1;
         }
     }
-    if(check_input != 3){
+    if(check_input != 3 || C < 4 || N < 2){
         write(2,err_mass,strlen(err_mass));
         exit(0);
     }
@@ -190,10 +215,8 @@ int main(int argc, char *argv[]){
 
     fd = open_file(inputfile);
     Nloop = N;
+    Cnum = C;
 
-    //if ((keys = ftok("/tmp", 'a')) == -1){
-	//    exitInf("error ftok key");
-    //}
     keys = IPC_PRIVATE;
     if((semid = semget(keys, 2, 0666 | IPC_CREAT ) ) == -1){
 	    exitInf("error semget");
@@ -205,12 +228,19 @@ int main(int argc, char *argv[]){
         exitInf("error intializing semaphores");
     }
 
-
+    
 
     Ctimes = malloc(C * sizeof(pthread_t));
 
     void *ret;
     pthread_create(&t1,NULL,supplier,&fd);
+
+    if(sig_check == 1){
+        close_file(fd);
+        free(Ctimes);
+        quit_c();
+    }
+
 
     int i = 0, j= 0,send[C];
 
@@ -219,19 +249,28 @@ int main(int argc, char *argv[]){
         pthread_create(&Ctimes[i],NULL,consumer,&send[i]);
     }
 
+    if(sig_check == 1){
+        close_file(fd);
+        for(j = 0;j < C; j++){
+            pthread_cancel(Ctimes[j]);
+        }
+        free(Ctimes);
+        quit_c();
+    }
     
 
     for(j = 0;j < C; j++){
         pthread_join(Ctimes[j], &ret);
     }
     
-    //int *a = (int*) ret;
-    //printf("\n ho %d\n", *a);
+    if(sig_check == 1){
+        close_file(fd);
+        free(Ctimes);
+        quit_c();
+    }
 
     free(Ctimes);
-    if(semctl(semid, COUNT1, IPC_RMID, un) == -1){
-        exitInf("error intializing semaphores1");
-    }
+
 
     return 0;
 }
@@ -276,12 +315,13 @@ void wait_two(int num1,int num2){
 
 char *timestamp()
 {
-    time_t now;
-    now = time(NULL);
-    char *tstr = ctime(&now);
-    char *line = strchr(tstr, '\n');
-    line[0] = '\0';
-    return tstr;
+    time_t localTime;
+    localTime=time(NULL);
+    char *str = asctime( localtime(&localTime));
+    char *removed = strchr(str, '\n');
+    if(removed != NULL)
+        removed[0] = '\0';
+    return str;
 }
 
 
