@@ -13,6 +13,7 @@
 
 int **A, **B, **C;
 pthread_t *mtimes;
+double **writefile,**writefile2;
 int pow_num = 0;
 int arrived = 0;
 int N = 0;
@@ -39,6 +40,7 @@ sig_atomic_t sig_check=0;
 /*to handle ctrl c*/
 void signal_handle(int sig) {
     int i;
+    sig_check = 1;
     if(A!=NULL)
         free_array(A,pow_num);
     if(B!=NULL)    
@@ -59,6 +61,12 @@ void signal_handle(int sig) {
     }    
     if(mtimes!=NULL)  
         free(mtimes);   
+    if(writefile!= NULL){
+        free_array2(writefile2,pow_num);
+    }   
+    if(writefile2!= NULL){
+        free_array2(writefile2,pow_num);
+    }    
     quit_c();
 }
 
@@ -78,8 +86,8 @@ int main(int argc, char*argv[]){
     void *ret;
     int k,l;
     struct sigaction sa;
-    double **writefile,**writefile2;
-    struct flock fl = {F_WRLCK, SEEK_SET,0,0,0};
+    time_t e_time;
+    double total_t;
 
     sa.sa_handler = signal_handle;
     sigemptyset(&sa.sa_mask);
@@ -121,7 +129,7 @@ int main(int argc, char*argv[]){
     }
     pow_num = power_of_2(n);
     N = m;
-
+    
     if(check_input != 5 || m < 2 || n < 3 || m%2 != 0 || pow_num % m != 0){
         write(2,err_mass,strlen(err_mass));
         exit(0);
@@ -130,7 +138,7 @@ int main(int argc, char*argv[]){
     if(sig_check == 1){
         quit_c();
     }
-   
+    
 
     A = calloc(pow_num, sizeof(int*));
     for(i = 0; i < pow_num; i++){
@@ -146,6 +154,11 @@ int main(int argc, char*argv[]){
     C = calloc(pow_num, sizeof(int*));
     for(i = 0; i < pow_num; i++){
         C[i] = calloc(pow_num , sizeof(int));
+    }
+
+    writefile2 = calloc(pow_num, sizeof(double*));
+    for(i = 0; i < pow_num; i++){
+        writefile2[i] = calloc(pow_num * 2, sizeof(double));
     }
 
 
@@ -186,51 +199,38 @@ int main(int argc, char*argv[]){
     for(j = 0; j < m; j++){
         pthread_join(mtimes[j], &ret);
         writefile = (double **) ret;
-        sprintf(buff," yazıyro  %d\n",j);
-        write(1,buff,strlen(buff));
         for(k = 0;k< pow_num;k++){
             for(l=0 ; l < pow_num/N; l++){
-                lock_file(out,fl);
-                if(l == pow_num/N - 1){
-                    sprintf(buff,"%f %fj",writefile[k][l],writefile[k][l+1]);
-                    write(out,buff,strlen(buff));
-                }
-                else{
-                    sprintf(buff,"%f %fj, ",writefile[k][l],writefile[k][l+1]);
-                    write(out,buff,strlen(buff));
-                }
-                unlock_file(out,fl);
+                    writefile2[k][l + (pow_num/N ) * j] = writefile[k][l];
+                    writefile2[k][l + (pow_num/N ) * j + 1] = writefile[k][l+1];
             }
-            write(out,"\n",1);
         }
         free_array2(writefile,pow_num);
     }
 
+    for(k = 0; k < pow_num; k++){
+        for(l = 0; l < pow_num; l++){
+            if(l == pow_num-1){
+                sprintf(buff,"%f + %fj",writefile2[k][l],writefile2[k][l+1]);
+                write(out,buff,strlen(buff));
+            }
+            else{
+                sprintf(buff,"%f + %fj, ",writefile2[k][l],writefile2[k][l+1]);
+                write(out,buff,strlen(buff));
+            }
+        }
+        write(out,"\n",1);
+    }
 
+    free_array2(writefile2,pow_num);
+
+    e_time = clock();
+
+    total_t = (double)(e_time - start_t) / CLOCKS_PER_SEC;
+    sprintf(buff,"%s , The process has written the output file. The total time spent is %.3f seconds\n",timestamp(),total_t);
+    write(1,buff,strlen(buff));
 
     /*
-    printf(" %s %s %s %d %d %d\n",inputfile1,inputfile2,output,n,m,power_of_2(n));
-
-    for(i = 0; i < pow_num; i++){
-        for(j = 0; j < pow_num; j++){
-            printf(" %d ",A[i][j]);
-        }
-        printf("\n");
-    }
-    printf("\n");
-    for(i = 0; i < pow_num; i++){
-        for(j = 0; j < pow_num; j++){
-            printf(" %d ",B[i][j]);
-        }
-        printf("\n");
-    }
-    for(i = 0; i < pow_num; i++){
-        for(j = 0; j < pow_num; j++){
-            printf(" %d ",C[i][j]);
-        }
-        printf("\n");
-    }
-    */
   
     for(i = 0; i < pow_num; i++){
         for(j = 0; j < pow_num; j++){
@@ -238,6 +238,7 @@ int main(int argc, char*argv[]){
         }
         printf("\n");
     }
+    */
 
 
     free_array(A,pow_num);
@@ -255,22 +256,20 @@ int main(int argc, char*argv[]){
 void *calculation(void* param){
     int p = *((int *)(param));
     double **D;
-    int i,j;
+    int i;
     char buff[256];
     double total_t;
-    int k;
+    time_t e_time;
 
     
     pthread_mutex_lock(&mutex);
-    end_t = clock();
-    total_t = (double)(end_t - start_t) / CLOCKS_PER_SEC;
-    sprintf(buff,"%s , Thread %d has reached the rendezvous point in %f seconds.\n",timestamp(),p,total_t);
+    e_time = clock();
+    total_t = (double)(e_time - start_t) / CLOCKS_PER_SEC;
+    sprintf(buff,"%s , Thread %d has reached the rendezvous point in %.4f seconds.\n",timestamp(),p,total_t);
     write(1,buff,strlen(buff));
     calculate_product(pow_num,(pow_num/N),pow_num,(pow_num/N)*(p-1));
 
-    //free_array(D,pow_num);
-
-
+    
     ++arrived;
     for(;;){
         if(arrived < N){
@@ -286,34 +285,16 @@ void *calculation(void* param){
 
 
 
-
     D = calloc(pow_num, sizeof(double*));
     for(i = 0; i < pow_num; i++){
         D[i] = calloc((pow_num/N)*2, sizeof(double));
     }
-    /*
-    for(i = 0; i < pow_num; i++){
-        k = 0;
-        for(j=(pow_num/N)*(p-1); j < (pow_num/N)*p; j++){
-            D[i][k] = C[i][j];
-            k++;
-        }
-    }
-    */
-    calculate_dft(pow_num/N,pow_num,(pow_num/N)*(p-1),D);
-    //free_array(D,pow_num);
-    /*
-    for(k = 0;k< pow_num;k++){
-        for(int j=0 ; j < pow_num/N; j++){
-            fprintf(stdout," %f, %fi ",D[k][j],D[k][j+1]);
-        }
-        fprintf(stdout,"\n");
-    }
-    */
 
-    end_t = clock();
-    total_t = (double)(end_t - start_t) / CLOCKS_PER_SEC;
-    sprintf(buff,"%s , Thread %d has finished the second part in %f seconds.\n",timestamp(),p,total_t);
+    calculate_dft(pow_num/N,pow_num,(pow_num/N)*(p-1),D);
+
+    e_time = clock();
+    total_t = (double)(e_time - start_t) / CLOCKS_PER_SEC;
+    sprintf(buff,"%s , Thread %d has finished the second part in %.4f seconds.\n",timestamp(),p,total_t);
     write(1,buff,strlen(buff));
 
     pthread_mutex_unlock(&mutex);
@@ -396,21 +377,22 @@ void free_array2(double **arr, int n){
 void calculate_dft(int width,int height,int j1,double **D){
     float RE[height][width];
     float IM [height][width];
-    int k = 0;
-    for(int i=0;i<height;i++){
-        for(int j=0;j<width;j++){
-            float ak=0; 
-            float bk=0;
-            for(int ii=0;ii<height;ii++){
-                for(int jj=0;jj<width;jj++){
-                float x=-2.0*M_PI*(float)i*(float)ii/(float)height;
-                float y=-2.0*M_PI*j*(jj+j1)/(float)width;
-                ak+=C[ii][jj+j1]*cos(x+y);
-                bk+=C[ii][jj+j1]*1.0*sin(x+y);
+    int k = 0,i,j,i2,j2;
+    float an,bn,x,y;
+    for(i=0;i<height;i++){
+        for(j=0;j<width;j++){
+            an=0; 
+            bn=0;
+            for(i2=0;i2<height;i2++){
+                for(j2=0;j2<width;j2++){
+                    x=-2.0*M_PI*i*i2/(float)height;
+                    y=-2.0*M_PI*(j)*(j2)/(float)width;
+                    an+=C[i2][j2]*cos(x+y);
+                    bn+=C[i2][j2]*sin(x+y);
+                }
             }
-        }
-        RE[i][j]=ak;
-        IM[i][j]=bk;
+            RE[i][j]=an;
+            IM[i][j]=bn;
         }
     }
 
@@ -418,9 +400,7 @@ void calculate_dft(int width,int height,int j1,double **D){
         for(int j=0 ; j< width; j++){
             D[k][j] =  RE[k][j];
             D[k][j+1] = IM[k][j];
-            //fprintf(stdout," %f, %fi ",RE[k][j],IM[k][j]);
         }
-        //fprintf(stdout,"\n");
     }
 
 }
