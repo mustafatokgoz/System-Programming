@@ -16,7 +16,7 @@ pthread_t *mtimes;
 int pow_num = 0;
 int arrived = 0;
 int N = 0;
-int fd1 = -1,fd2 = -1;
+int fd1 = -1,fd2 = -1,out=-1;
 int *send;
 clock_t start_t, end_t;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -25,11 +25,14 @@ pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 int power_of_2(int num);
 int read_files_into_memory(int fd1, int fd2);
 void free_array(int **arr, int n);
+void free_array2(double **arr, int n);
 void *calculation(void* param);
 void calculate_product(int r1,int c2,int c1, int j1);
 char *timestamp();
 void quit_c();
-void calculate_dft();
+void calculate_dft(int width,int height,int j1,double **D);
+void lock_file(int fd, struct flock fl);
+void unlock_file(int fd, struct flock fl);
 
 sig_atomic_t sig_check=0;
 
@@ -46,6 +49,8 @@ void signal_handle(int sig) {
         close(fd1);
     if (fd2 != -1)    
         close(fd2);
+    if (out != -1)    
+        close(fd2);    
     if(send!=NULL){    
         for(i = 0;i < N; i++){
             pthread_cancel(mtimes[i]);
@@ -71,8 +76,10 @@ int main(int argc, char*argv[]){
     int i,j;
     char buff[256];
     void *ret;
+    int k,l;
     struct sigaction sa;
-
+    double **writefile,**writefile2;
+    struct flock fl = {F_WRLCK, SEEK_SET,0,0,0};
 
     sa.sa_handler = signal_handle;
     sigemptyset(&sa.sa_mask);
@@ -145,6 +152,10 @@ int main(int argc, char*argv[]){
     
     fd1 = open_file(inputfile1);
     fd2 = open_file(inputfile2);
+    out = open(output, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (out == -1){
+        exitInf("Log file doesn't open\n");
+    }
 
     if (read_files_into_memory(fd1,fd2) == 1){
         sprintf(buff,"Fatal Error \n");
@@ -174,6 +185,25 @@ int main(int argc, char*argv[]){
 
     for(j = 0; j < m; j++){
         pthread_join(mtimes[j], &ret);
+        writefile = (double **) ret;
+        sprintf(buff," yazıyro  %d\n",j);
+        write(1,buff,strlen(buff));
+        for(k = 0;k< pow_num;k++){
+            for(l=0 ; l < pow_num/N; l++){
+                lock_file(out,fl);
+                if(l == pow_num/N - 1){
+                    sprintf(buff,"%f %fj",writefile[k][l],writefile[k][l+1]);
+                    write(out,buff,strlen(buff));
+                }
+                else{
+                    sprintf(buff,"%f %fj, ",writefile[k][l],writefile[k][l+1]);
+                    write(out,buff,strlen(buff));
+                }
+                unlock_file(out,fl);
+            }
+            write(out,"\n",1);
+        }
+        free_array2(writefile,pow_num);
     }
 
 
@@ -209,7 +239,7 @@ int main(int argc, char*argv[]){
         printf("\n");
     }
 
-    
+
     free_array(A,pow_num);
     free_array(B,pow_num);
     free_array(C,pow_num);
@@ -217,13 +247,15 @@ int main(int argc, char*argv[]){
     free(mtimes);
     close_file(fd1);
     close_file(fd2);
+    close_file(out);
 
     return 0;
 }
 
 void *calculation(void* param){
     int p = *((int *)(param));
-    int **D,i,j;
+    double **D;
+    int i,j;
     char buff[256];
     double total_t;
     int k;
@@ -246,19 +278,20 @@ void *calculation(void* param){
         }    
         else{
             pthread_cond_broadcast(&cond);
+            sprintf(buff,"%s , Thread %d is advancing to the second part\n",timestamp(),p);
+            write(1,buff,strlen(buff));
             break;
         }    
     }
 
 
-    sprintf(buff,"%s , Thread %d is advancing to the second part\n",timestamp(),p);
-    write(1,buff,strlen(buff));
 
-    D = calloc(pow_num, sizeof(int*));
+
+    D = calloc(pow_num, sizeof(double*));
     for(i = 0; i < pow_num; i++){
-        D[i] = calloc(pow_num/N, sizeof(int));
+        D[i] = calloc((pow_num/N)*2, sizeof(double));
     }
-
+    /*
     for(i = 0; i < pow_num; i++){
         k = 0;
         for(j=(pow_num/N)*(p-1); j < (pow_num/N)*p; j++){
@@ -266,9 +299,17 @@ void *calculation(void* param){
             k++;
         }
     }
-
-    calculate_dft(pow_num/N,pow_num,0,D);
+    */
+    calculate_dft(pow_num/N,pow_num,(pow_num/N)*(p-1),D);
     //free_array(D,pow_num);
+    /*
+    for(k = 0;k< pow_num;k++){
+        for(int j=0 ; j < pow_num/N; j++){
+            fprintf(stdout," %f, %fi ",D[k][j],D[k][j+1]);
+        }
+        fprintf(stdout,"\n");
+    }
+    */
 
     end_t = clock();
     total_t = (double)(end_t - start_t) / CLOCKS_PER_SEC;
@@ -277,9 +318,7 @@ void *calculation(void* param){
 
     pthread_mutex_unlock(&mutex);
 
-
-
-    pthread_exit(NULL);
+    pthread_exit(D);
 }    
 
 
@@ -346,7 +385,15 @@ void free_array(int **arr, int n){
   free(arr);
 }
 
-void calculate_dft(int width,int height,int j1,int **D){
+void free_array2(double **arr, int n){
+  int i = 0;
+  for ( i = 0; i < n; i++ ){
+        free(arr[i]);
+  }
+  free(arr);
+}
+
+void calculate_dft(int width,int height,int j1,double **D){
     float RE[height][width];
     float IM [height][width];
     int k = 0;
@@ -358,23 +405,43 @@ void calculate_dft(int width,int height,int j1,int **D){
                 for(int jj=0;jj<width;jj++){
                 float x=-2.0*M_PI*(float)i*(float)ii/(float)height;
                 float y=-2.0*M_PI*j*(jj+j1)/(float)width;
-                ak+=D[ii][jj+j1]*cos(x+y);
-                bk+=D[ii][jj + j1]*1.0*sin(x+y);
+                ak+=C[ii][jj+j1]*cos(x+y);
+                bk+=C[ii][jj+j1]*1.0*sin(x+y);
             }
         }
         RE[i][j]=ak;
         IM[i][j]=bk;
         }
-    
     }
+
     for(k = 0;k< height;k++){
         for(int j=0 ; j< width; j++){
-            fprintf(stdout," %f, %fi ",RE[k][j],IM[k][j]);
+            D[k][j] =  RE[k][j];
+            D[k][j+1] = IM[k][j];
+            //fprintf(stdout," %f, %fi ",RE[k][j],IM[k][j]);
         }
-        fprintf(stdout,"\n");
+        //fprintf(stdout,"\n");
     }
 
 }
+
+void lock_file(int fd, struct flock fl){
+    fl.l_type = F_WRLCK;
+    if (fcntl(fd, F_SETLKW, &fl) == -1){
+    		perror("fcntl");
+    		exit(1);
+    }   
+}
+
+void unlock_file(int fd, struct flock fl){
+    fl.l_type = F_UNLCK;
+    if (fcntl(fd, F_SETLKW, &fl) == -1){
+    		perror("fcntl");
+    		exit(1);
+    }    
+}
+
+
 
 
 char *timestamp(){
