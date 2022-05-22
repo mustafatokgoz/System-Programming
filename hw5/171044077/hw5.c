@@ -13,7 +13,7 @@
 
 int **A, **B, **C;
 pthread_t *mtimes;
-double **writefile,**writefile2RE,**writefile2IM;
+double **writefile,**writefile2;
 int pow_num = 0;
 int arrived = 0;
 int N = 0;
@@ -60,14 +60,11 @@ void signal_handle(int sig) {
     if(mtimes!=NULL)  
         free(mtimes);   
     if(writefile!= NULL){
-        free_array2(writefile,pow_num);
+        free_array2(writefile2,pow_num);
     }   
-    if(writefile2RE!= NULL){
-        free_array2(writefile2RE,pow_num);
+    if(writefile2!= NULL){
+        free_array2(writefile2,pow_num);
     }    
-    if(writefile2IM!= NULL){
-        free_array2(writefile2IM,pow_num);
-    } 
     quit_c();
 }
 
@@ -158,13 +155,9 @@ int main(int argc, char*argv[]){
         C[i] = calloc(pow_num , sizeof(int));
     }
 
-    writefile2RE = calloc(pow_num, sizeof(double*));
+    writefile2 = calloc(pow_num, sizeof(double*));
     for(i = 0; i < pow_num; i++){
-        writefile2RE[i] = calloc(pow_num, sizeof(double));
-    }
-    writefile2IM = calloc(pow_num, sizeof(double*));
-    for(i = 0; i < pow_num; i++){
-        writefile2IM[i] = calloc(pow_num, sizeof(double));
+        writefile2[i] = calloc(pow_num * 2, sizeof(double));
     }
 
 
@@ -182,8 +175,7 @@ int main(int argc, char*argv[]){
         free_array(A,pow_num);
         free_array(B,pow_num);
         free_array(C,pow_num);
-        free_array2(writefile2RE,pow_num);
-        free_array2(writefile2IM,pow_num);
+        free_array2(writefile2,pow_num);
         close_file(fd1);
         close_file(fd2);
         exit(0);
@@ -208,36 +200,31 @@ int main(int argc, char*argv[]){
         pthread_join(mtimes[j], &ret);
         writefile = (double **) ret;
         for(k = 0;k< pow_num;k++){
-            int e = 0;
-            for(l=(pow_num/N) * j  ; l < pow_num/N + (pow_num/N) * j; l++){
-                writefile2RE[k][l] = writefile[k][e];
-                writefile2IM[k][l] = writefile[k][e + 1];
-                e += 2; 
+            for(l=0 ; l < pow_num/N * 2; l = l + 2){
+                writefile2[k][l + (pow_num / N) * j] = writefile[k][l];
+                writefile2[k][l + (pow_num / N) * j + 1] = writefile[k][l + 1];
+
             }
         }
-
         free_array2(writefile,pow_num);
     }
 
     for (k = 0; k < pow_num; k++){
-        int e = 0;
-        for (l = 0; l < pow_num ; l++){
+        for (l = 0; l < pow_num * 2; l = l + 2){
             if (l == pow_num - 1){
-                sprintf(buff, "%.3f + %.3fj", writefile2RE[k][l], writefile2IM[k][l]);
+                sprintf(buff, "%.3f + %.3fj", writefile2[k][l], writefile2[k][l + 1]);
                 write(out, buff, strlen(buff));
             }
             else{
-                sprintf(buff, "%.3f + %.3fj, ", writefile2RE[k][l], writefile2IM[k][l]);
+                sprintf(buff, "%.3f + %.3fj, ", writefile2[k][l], writefile2[k][l + 1]);
                 write(out, buff, strlen(buff));
             }
-             e += 2;
             
         }
         write(out, "\n", 1);
     }
 
-    free_array2(writefile2RE,pow_num);
-    free_array2(writefile2IM,pow_num);
+    free_array2(writefile2,pow_num);
 
     e_time = clock();
 
@@ -293,7 +280,7 @@ void *calculation(void* param){
 
     D = calloc(pow_num, sizeof(double*));
     for(i = 0; i < pow_num; i++){
-        D[i] = calloc((pow_num)*2, sizeof(double));
+        D[i] = calloc((pow_num/N)*2, sizeof(double));
     }
 
     calculate_dft(pow_num/N,pow_num,(pow_num/N)*(p-1),D);
@@ -305,7 +292,7 @@ void *calculation(void* param){
 
     pthread_mutex_unlock(&mutex);
 
-    return D;
+    pthread_exit(D);
 }    
 
 
@@ -381,13 +368,13 @@ void free_array2(double **arr, int n){
 }
 
 void calculate_dft(int width,int height,int j1,double **D){
-    float RE[height][height];
-    float IM [height][height];
+    float RE[height][width];
+    float IM [height][width];
     int k = 0,i,j,i2,j2;
     float an,bn,x,y;
     int e;
     for(i=0;i<height;i++){
-        for(j=j1;j<width + j1;j++){
+        for(j=0;j<width;j++){
             an=0; 
             bn=0;
             for(i2=0;i2<height;i2++){
@@ -405,12 +392,12 @@ void calculate_dft(int width,int height,int j1,double **D){
 
     for(k = 0;k< height;k++){
         e = 0;
-        for(j=j1 ; j< width+j1; j++){
+        for(int j=0 ; j< width; j++){
             D[k][e] =  RE[k][j];
             D[k][e+1] = IM[k][j];
+
             e += 2; 
         }
-
     }
 
 }
