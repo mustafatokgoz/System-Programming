@@ -10,6 +10,7 @@
 #include <string.h>
 #include "helper.h"
 #include "utility.h"
+#include "bst_for_files.h"
 
 
 int main(int argc, char*argv[]){
@@ -66,6 +67,34 @@ int main(int argc, char*argv[]){
     }
 
     printf("%s %s %d %d %d \n",director_path,ip,port,low_bound,up_bound);
+    char **content;
+    content = malloc(5 * sizeof(char *));
+    for(i = 0; i < 5; i++){
+        content[i] = malloc(50 * sizeof(char));
+    }
+    strcpy(content[0],"mustafa tokgoz");
+    strcpy(content[1],"musokgoz  dksjbfdkjs");
+    strcpy(content[2],"must fdlksnfkdlsnf dsoz");
+    strcpy(content[3],"musknfdk oz");
+    node* root = NULL;
+    root = insert(root,"10-11-2001","ANKARA",content,5);
+    insert(root,"20-11-2002","ISTANBUL",content,5);
+    strcpy(content[2],"serhatoz  dksjbfdkjs");
+    strcpy(content[3],"mserhatnfkdlsnf dsoz");
+    insert(root,"14-01-2000","ANKARA",content,5);
+    insert(root,"20-11-2011","ISTANBUL",content,5);
+    insert(root,"18-11-2020","ANKARA",content,5);
+ 
+    node* root2 = root;
+    
+
+    int count;
+    search(root2,"00-01-2000","10-01-2003",&count);
+    // print inoder traversal of the BST
+    printf("%d \n",count);
+    inorder(root);
+    //free_tree(root);
+
     return 0;
 
 }    
