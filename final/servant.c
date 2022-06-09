@@ -8,6 +8,8 @@
 #include <signal.h>
 #include <time.h>
 #include <string.h>
+#include <dirent.h> 
+
 #include "helper.h"
 #include "utility.h"
 #include "bst_for_files.h"
@@ -67,6 +69,16 @@ int main(int argc, char*argv[]){
     }
 
     printf("%s %s %d %d %d \n",director_path,ip,port,low_bound,up_bound);
+    int count = 0,count2= 0;
+    node* root = NULL;
+    root = read_from_disk(director_path,low_bound,up_bound,root);
+
+    search(root,"00-01-2000","20-11-2055","VILLA","ADANA",1,&count);
+    search(root,"00-01-2000","20-11-2055","VILLA","",0,&count2);
+    printf("%d %d\n",count,count2);
+
+    free_tree(root);
+    /*
     char **content;
     content = malloc(5 * sizeof(char *));
     for(i = 0; i < 5; i++){
@@ -77,23 +89,32 @@ int main(int argc, char*argv[]){
     strcpy(content[2],"must fdlksnfkdlsnf dsoz");
     strcpy(content[3],"musknfdk oz");
     node* root = NULL;
-    root = insert(root,"10-11-2001","ANKARA",content,5);
-    insert(root,"20-11-2002","ISTANBUL",content,5);
+    root = insert(root,"10-11-2001","ANKARA","TARLA",content,5);
+    insert(root,"20-11-2002","ISTANBUL","BINA",content,5);
     strcpy(content[2],"serhatoz  dksjbfdkjs");
     strcpy(content[3],"mserhatnfkdlsnf dsoz");
-    insert(root,"14-01-2000","ANKARA",content,5);
-    insert(root,"20-11-2011","ISTANBUL",content,5);
-    insert(root,"18-11-2020","ANKARA",content,5);
+    insert(root,"14-01-2000","ANKARA","KAPI",content,5);
+    insert(root,"20-11-2011","ISTANBUL","TARLA",content,5);
+    insert(root,"18-11-2020","ANKARA","EV",content,5);
  
     node* root2 = root;
     
 
     int count;
-    search(root2,"00-01-2000","10-01-2003",&count);
+    
     // print inoder traversal of the BST
     printf("%d \n",count);
     inorder(root);
-    //free_tree(root);
+    
+
+    free_array2(content,5);
+
+    */
+
+
+
+    
+
 
     return 0;
 
