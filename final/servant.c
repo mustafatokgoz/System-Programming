@@ -59,8 +59,8 @@ int main(int argc, char*argv[]){
         write(2,err_mass,strlen(err_mass));
         exit(0);
     }
-    if(port < 2000){
-        write(2,"You should enter port number bigger than 2000\n",strlen("You should enter port number bigger than 2000\n"));
+    if(port < 2000 && port > 65535){
+        write(2,"You should enter port number bigger than 2000 and less than 65535\n",strlen("You should enter port number bigger than 2000 and less than 65535\n"));
         exit(0);
     }
     if (seperate_c_paramater(&low_bound,&up_bound,c_param) == -1){
@@ -78,6 +78,7 @@ int main(int argc, char*argv[]){
     printf("%d %d\n",count,count2);
 
     free_tree(root);
+    
     /*
     char **content;
     content = malloc(5 * sizeof(char *));

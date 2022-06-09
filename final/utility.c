@@ -8,7 +8,6 @@
 
 
 int seperate_c_paramater(int *lower_bound,int *upper_bound,char *c_parameter){
-    int i = 0;
     char *token = strtok(c_parameter,"-");
     *lower_bound = atoi(token);
     if(*lower_bound == 0){
@@ -91,44 +90,42 @@ node* read_from_disk(char *director_path,int low_bound,int up_bound,node* root){
         buff[len] = '\0';
         directory = opendir(buff);
         if(directory == NULL){
-            return -1;
+            return NULL;
         }
-        perror("hey1");
+        
         while( (dir = readdir(directory)) != NULL){
             
             if(dir->d_type == DT_REG){
                 //strcpy(root->city,sorted_array[i+low_bound]);
                 //strcpy(root->date,dir->d_name);
-                perror("hey2");
+                
                 len = sprintf(buff2,"%s/%s",buff,dir->d_name);
                 buff2[len] = '\0';
                 //open_file(buff);
                 FILE * fp;
-                char * line = NULL;
-                size_t len2 = 0;
-                ssize_t read;
-                perror("hey3");
+                
+                
                 fp = fopen(buff2, "r");
                 if (fp == NULL)
                     exit(0);
                    
                 j = 0;
                 fcontent = malloc(1 * sizeof(char *));
-                perror("hey4");
-                // Burada dosyaya eriştim ama malloc lamada ve okumada sıkıntı yaşıyorum.
+                
+                
                 char buffer[500];
                 while (fgets(buffer, 500, fp)){
-                        // Remove trailing newline
                         fcontent = realloc(fcontent,(j+1) * sizeof(char*));
                         buffer[strcspn(buffer, "\n")] = 0;
                         fcontent[j] = malloc((strlen(buffer) + 2) * sizeof(char));
                         strncpy(fcontent[j],buffer,strlen(buffer));
                         fcontent[j][strlen(buffer)]='\0';
                         printf("%s\n", fcontent[j]);
-                        j++;
-                        
+                        if(strlen(fcontent[j]) > 4){
+                            j++;
+                        }    
                 }
-                perror("hey1");
+                
                 if(check == 0){
                     root = insert(root,dir->d_name,sorted_array[i+low_bound-1],fcontent,j);
                     first_addr = root;
@@ -137,7 +134,7 @@ node* read_from_disk(char *director_path,int low_bound,int up_bound,node* root){
                 else{
                     insert(root,dir->d_name,sorted_array[i+low_bound-1],fcontent,j);
                 }
-                perror("hey2");
+                
                 fclose(fp);
                 //if (line != NULL)
                 //    free(line);
@@ -148,10 +145,41 @@ node* read_from_disk(char *director_path,int low_bound,int up_bound,node* root){
     return first_addr;
 }
 
-void free_array2(double **arr, int n){
+void free_array2(char **arr, int n){
   int i = 0;
   for ( i = 0; i < n; i++ ){
         free(arr[i]);
   }
   free(arr);
+}
+
+char **get_requests(char *request_file,int *n){
+    FILE * fp;
+    char **requests;
+    char buffer[500];
+    int j = 0;
+    fp = fopen(request_file, "r");
+    requests = malloc(1 * sizeof(char *));
+    while (fgets(buffer, 500, fp)){
+            requests = realloc(requests,(j+1) * sizeof(char*));
+            buffer[strcspn(buffer, "\n")] = 0;
+            requests[j] = malloc((strlen(buffer) + 2) * sizeof(char));
+            strncpy(requests[j],buffer,strlen(buffer));
+            requests[j][strlen(buffer)]='\0';
+            if(strlen(requests[j]) > 4){
+                j++;
+            }
+    }
+    if(requests[0] == NULL){
+        free(requests);
+        return NULL;
+    }
+    if(strlen(requests[0]) < 3){
+        free_array2(requests,j);
+        return NULL;
+    }
+    *n = j;
+    fclose(fp);
+    return requests;
+
 }

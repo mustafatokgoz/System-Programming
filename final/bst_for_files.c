@@ -138,7 +138,7 @@ void free_tree(node *root){
         free_tree(root->left);
         
         if(root->file_content!=NULL){
-            for(i = 0; i< root->n;i++){
+            for(i = 0; i < root->n ;i++){
                 if(root->file_content[i]!=NULL){
                     free(root->file_content[i]);
                 }
