@@ -146,5 +146,6 @@ void free_tree(node *root){
             free(root->file_content);
         }
         free(root);
+        root = NULL;
     }
 }

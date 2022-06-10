@@ -44,7 +44,7 @@ node* read_from_disk(char *director_path,int low_bound,int up_bound,node* root){
     node *first_addr;
     int city_count = 0;
     int index = 0;
-    int i = 0;
+    int i = 0,k = 0;
     int check = 0;
     int len;
     
@@ -112,27 +112,39 @@ node* read_from_disk(char *director_path,int low_bound,int up_bound,node* root){
                 j = 0;
                 fcontent = malloc(1 * sizeof(char *));
                 
-                
                 char buffer[500];
                 while (fgets(buffer, 500, fp)){
+                    if(strlen(buffer) > 5 && buffer[0]!= '\n' && fcontent !=NULL){
                         fcontent = realloc(fcontent,(j+1) * sizeof(char*));
                         buffer[strcspn(buffer, "\n")] = 0;
-                        fcontent[j] = malloc((strlen(buffer) + 2) * sizeof(char));
-                        strncpy(fcontent[j],buffer,strlen(buffer));
-                        fcontent[j][strlen(buffer)]='\0';
-                        printf("%s\n", fcontent[j]);
-                        if(strlen(fcontent[j]) > 4){
-                            j++;
-                        }    
+                        if(strlen(buffer) > 5  && fcontent!=NULL){
+                            fcontent[j] = malloc((strlen(buffer) + 2) * sizeof(char));
+                            strncpy(fcontent[j],buffer,strlen(buffer));
+                            fcontent[j][strlen(buffer)]='\0';
+                            printf("%s\n", fcontent[j]);
+                            if(strlen(fcontent[j]) > 4){
+                                j++;
+                            }    
+                        }
+                    }    
+                }
+                if(fcontent[0] == NULL){
+                    free(fcontent);
+                }
+                else if(strlen(fcontent[0]) < 3){
+                    free_array2(fcontent,j);
+                    
                 }
                 
-                if(check == 0){
-                    root = insert(root,dir->d_name,sorted_array[i+low_bound-1],fcontent,j);
-                    first_addr = root;
-                    check++;
-                }
                 else{
-                    insert(root,dir->d_name,sorted_array[i+low_bound-1],fcontent,j);
+                    if(check == 0){
+                        root = insert(root,dir->d_name,sorted_array[i+low_bound-1],fcontent,j);
+                        first_addr = root;
+                        check++;
+                    }
+                    else{
+                        insert(root,dir->d_name,sorted_array[i+low_bound-1],fcontent,j);
+                    }
                 }
                 
                 fclose(fp);
@@ -163,11 +175,13 @@ char **get_requests(char *request_file,int *n){
     while (fgets(buffer, 500, fp)){
             requests = realloc(requests,(j+1) * sizeof(char*));
             buffer[strcspn(buffer, "\n")] = 0;
-            requests[j] = malloc((strlen(buffer) + 2) * sizeof(char));
-            strncpy(requests[j],buffer,strlen(buffer));
-            requests[j][strlen(buffer)]='\0';
-            if(strlen(requests[j]) > 4){
-                j++;
+            if(strlen(buffer) > 5){
+                requests[j] = malloc((strlen(buffer) + 2) * sizeof(char));
+                strncpy(requests[j],buffer,strlen(buffer));
+                requests[j][strlen(buffer)]='\0';
+                if(strlen(requests[j]) > 4){
+                    j++;
+                }
             }
     }
     if(requests[0] == NULL){
@@ -175,7 +189,7 @@ char **get_requests(char *request_file,int *n){
         return NULL;
     }
     if(strlen(requests[0]) < 3){
-        free_array2(requests,j);
+        free_array2(requests,j+1);
         return NULL;
     }
     *n = j;

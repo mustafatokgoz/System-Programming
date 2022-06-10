@@ -91,9 +91,11 @@ int main(int argc, char*argv[]){
     for(j = 0; j < n; j++){
         pthread_join(ntimes[j], &ret);
     }
+    printf("Client: All threads have terminated, goodbye\n");
 
     free_array2(requests,n);
-
+    free(ntimes);
+    free(send);
 
 
 }
@@ -120,17 +122,20 @@ void *request_thread(void* param){
     printf("Client-Thread-%d: I am requesting “/%s”\n",p,requests[p]);
     char req[strlen(requests[p])+1];
     int len = strlen(requests[p]);
-    char respon[10];
+    char respon[1024];
+    int res = 0;
     sprintf(buff,"%d",len);
     strcpy(req,requests[p]);
+    //req[len] ='\0';
     client = client_to_server_connect(ip,port);
 
-    write(client,req,strlen(req));
-
-    while (read(client,respon,10) == 10);
-
-    printf("responde %s: %d\n",requests[p],atoi(respon));
-
+    write(client,req,strlen(req)+1);
+    
+    if(read(client,respon,1024) == -1){
+        perror("read error");
+    }
+    printf("Client-Thread-%d: The server’s response to “/%s” is %s\n",p,requests[p],respon);
+    printf("Client-Thread-%d: Terminating\n",p);
 
     pthread_mutex_unlock(&mutex);
     return NULL;
