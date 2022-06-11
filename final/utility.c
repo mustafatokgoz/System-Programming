@@ -171,6 +171,9 @@ char **get_requests(char *request_file,int *n){
     char buffer[500];
     int j = 0;
     fp = fopen(request_file, "r");
+    if(fp == NULL){
+        return NULL;
+    }
     requests = malloc(1 * sizeof(char *));
     while (fgets(buffer, 500, fp)){
             requests = realloc(requests,(j+1) * sizeof(char*));

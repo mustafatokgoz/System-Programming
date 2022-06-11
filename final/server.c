@@ -142,19 +142,22 @@ void *server_thread(void* param){
         int current_fd = remove_front(connection_queue);
         pthread_mutex_unlock(&mutex1);
 
+        pthread_mutex_lock(&mutex2);
+
         read(current_fd,buff,1024);
         printf("gelen pid port ve şehirler %s \n",buff);
         if(strncmp(buff,"transactionCount",strlen("transactionCount"))==0){
             printf("This is client \n");
         }
         else{
+            // gelen portu sakla ve şehirlerle eşleştir 
             printf("This is servant");
         }
         if(write(current_fd,"1",1) ==-1){
                 perror("Heeyyy");
         }
 
-        pthread_mutex_lock(&mutex2);
+        
         active--;
         pthread_mutex_unlock(&mutex2);
         pthread_cond_signal(&cond2);

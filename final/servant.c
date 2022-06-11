@@ -13,6 +13,7 @@
 #include "helper.h"
 #include "utility.h"
 #include "bst_for_files.h"
+#include "networking.h"
 
 
 int main(int argc, char*argv[]){
@@ -25,6 +26,7 @@ int main(int argc, char*argv[]){
     int i,j;
     char buff[256];
     void *ret;
+    int client;
     int low_bound,up_bound;
     
     while ((ch = getopt (argc, argv, "d:c:r:p:")) != -1){
@@ -76,6 +78,16 @@ int main(int argc, char*argv[]){
     search(root,"00-01-2000","20-11-2055","VILLA","ADANA",1,&count);
     search(root,"00-01-2000","20-11-2055","VILLA","",0,&count2);
     printf("%d %d\n",count,count2);
+
+    int res = 100,len;
+    len = sprintf(buff,"%d Adana-Ankara",res);
+    buff[len] = '\0';
+    //req[len] ='\0';
+    client = client_to_server_connect(ip,port);
+
+    write(client,buff,strlen(buff)+1);
+
+
 
     free_tree(root);
     

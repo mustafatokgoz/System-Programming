@@ -73,6 +73,9 @@ int main(int argc, char*argv[]){
     }
 
     requests = get_requests(request_path,&n);
+    if(requests == NULL){
+        exitInf("File error");
+    }
 
     //for(i = 0; i < n; i++){
     //    printf("%s \n",requests[i]);
