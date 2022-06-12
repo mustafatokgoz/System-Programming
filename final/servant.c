@@ -73,6 +73,7 @@ int main(int argc, char*argv[]){
     printf("%s %s %d %d %d \n",director_path,ip,port,low_bound,up_bound);
     int count = 0,count2= 0;
     node* root = NULL;
+    
     root = read_from_disk(director_path,low_bound,up_bound,root);
 
     search(root,"00-01-2000","20-11-2055","VILLA","ADANA",1,&count);
@@ -82,14 +83,18 @@ int main(int argc, char*argv[]){
     int res = 100,len;
     len = sprintf(buff,"%d Adana-Ankara",res);
     buff[len] = '\0';
+
+   
     //req[len] ='\0';
-    client = client_to_server_connect(ip,port);
+    //client = client_to_server_connect(ip,port);
 
-    write(client,buff,strlen(buff)+1);
+    //write(client,buff,strlen(buff)+1);
+    //inorder(root);
 
-
-
+    
     free_tree(root);
+    
+    
     
     /*
     char **content;

@@ -12,12 +12,13 @@ node* newNode(char *date,char *city,char **content,int n){
     temp->left = temp->right = NULL;
     return temp;
 }
- 
+
+ int count2 = 0;
 void inorder(node* root){
+   
     if (root != NULL) {
         inorder(root->left);
         printf("%s %s \n", root->date,root->city);
-        printf("%s  \n", root->file_content[2]);
         inorder(root->right);
     }
 }
@@ -30,7 +31,7 @@ node* insert(node* node, char *date,char *city,char **content,int n)
  
     if (strcmp(date,node->date) < 0)
         node->left = insert(node->left, date,city,content,n);
-    else if (strcmp(date,node->date) > 0)
+    else if (strcmp(date,node->date) >= 0)
         node->right = insert(node->right,date,city,content,n);
  
     return node;
@@ -144,6 +145,7 @@ void free_tree(node *root){
                 }
             }
             free(root->file_content);
+            root->file_content = NULL;
         }
         free(root);
         root = NULL;

@@ -96,6 +96,7 @@ node* read_from_disk(char *director_path,int low_bound,int up_bound,node* root){
         while( (dir = readdir(directory)) != NULL){
             
             if(dir->d_type == DT_REG){
+                
                 //strcpy(root->city,sorted_array[i+low_bound]);
                 //strcpy(root->date,dir->d_name);
                 
@@ -110,42 +111,53 @@ node* read_from_disk(char *director_path,int low_bound,int up_bound,node* root){
                     exit(0);
                    
                 j = 0;
-                fcontent = malloc(1 * sizeof(char *));
-                
-                char buffer[500];
-                while (fgets(buffer, 500, fp)){
-                    if(strlen(buffer) > 5 && buffer[0]!= '\n' && fcontent !=NULL){
-                        fcontent = realloc(fcontent,(j+1) * sizeof(char*));
+                //fcontent = malloc(1 * sizeof(char *));
+                fcontent = NULL;
+                char buffer[1024];
+                while (fgets(buffer, 1024, fp)){
+                    if(strlen(buffer) > 5 && buffer[0]!= '\n' ){
+                        char **new_fcontent = realloc(fcontent,(j+1) * sizeof(char*));
+                        if(new_fcontent == NULL){
+                            perror("null olyor");
+                        }
+                        fcontent = new_fcontent;
                         buffer[strcspn(buffer, "\n")] = 0;
-                        if(strlen(buffer) > 5  && fcontent!=NULL){
+                        if(strlen(buffer) > 5 ){
                             fcontent[j] = malloc((strlen(buffer) + 2) * sizeof(char));
                             strncpy(fcontent[j],buffer,strlen(buffer));
                             fcontent[j][strlen(buffer)]='\0';
-                            printf("%s\n", fcontent[j]);
                             if(strlen(fcontent[j]) > 4){
                                 j++;
-                            }    
+                            }
+                                
                         }
                     }    
                 }
+                /*
                 if(fcontent[0] == NULL){
+                    perror("Bu yere giriyor");
                     free(fcontent);
                 }
                 else if(strlen(fcontent[0]) < 3){
+                    perror("Bu yere giriyor");
                     free_array2(fcontent,j);
                     
                 }
+                */
                 
-                else{
+                //else{
+                if(fcontent != NULL){
                     if(check == 0){
                         root = insert(root,dir->d_name,sorted_array[i+low_bound-1],fcontent,j);
                         first_addr = root;
                         check++;
                     }
                     else{
+                        
                         insert(root,dir->d_name,sorted_array[i+low_bound-1],fcontent,j);
                     }
                 }
+                //}
                 
                 fclose(fp);
                 //if (line != NULL)
