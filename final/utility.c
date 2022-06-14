@@ -37,7 +37,7 @@ void sort_cities(char arr[][70], int n){
 
 
 
-node* read_from_disk(char *director_path,int low_bound,int up_bound,node* root){
+node* read_from_disk(char *director_path,int low_bound,int up_bound,node* root,char *city1,char *city2){
     DIR *directory = opendir(director_path);  /*to open directory*/
     struct dirent *dir=NULL;
     char buff[500],buff2[500];
@@ -64,7 +64,7 @@ node* read_from_disk(char *director_path,int low_bound,int up_bound,node* root){
     
 
     directory = opendir(director_path); 
-    perror("heyy");
+   
     char sorted_array[city_count][70];
     index = 0;
     while ((dir = readdir(directory)) != NULL){
@@ -87,6 +87,12 @@ node* read_from_disk(char *director_path,int low_bound,int up_bound,node* root){
     char **fcontent = NULL;
     for(i = 0; i < up_bound-low_bound + 1 ; i++){
         len = sprintf(buff,"%s/%s",director_path,sorted_array[i+low_bound-1]);
+        if(i == 0){
+            strcpy(city1,sorted_array[i+low_bound-1]);
+        }
+        else if(i == up_bound-low_bound){
+             strcpy(city2,sorted_array[i+low_bound-1]);
+        }
         buff[len] = '\0';
         directory = opendir(buff);
         if(directory == NULL){

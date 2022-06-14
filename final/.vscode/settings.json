@@ -2,7 +2,9 @@
     "files.associations": {
         "stdio.h": "c",
         "stdlib.h": "c",
-        "helper.h": "c"
+        "helper.h": "c",
+        "bst_for_files.h": "c",
+        "socket.h": "c"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }

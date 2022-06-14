@@ -9,11 +9,29 @@
 #include <time.h>
 #include <string.h>
 #include <dirent.h> 
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "helper.h"
 #include "utility.h"
 #include "bst_for_files.h"
 #include "networking.h"
+
+#define MAX
+void *connection_thread(void* param);
+
+pthread_t thread[MAX];
+int t_count = 0;
+
+pid_t get_pid_from_proc_self () {
+    char target[32];
+    int pid;
+    
+    readlink ("/proc/self", target, sizeof (target));
+    sscanf (target, "%d", &pid);
+    return (pid_t) pid;
+}
 
 
 int main(int argc, char*argv[]){
@@ -25,6 +43,7 @@ int main(int argc, char*argv[]){
     char *err_mass = "You should enter the correct command (Run Way: ./servant -d directoryPath -c 10-19 -r IP -p PORT)\n";
     int i,j;
     char buff[256];
+    char buff2[1024];
     void *ret;
     int client;
     int low_bound,up_bound;
@@ -73,8 +92,9 @@ int main(int argc, char*argv[]){
     printf("%s %s %d %d %d \n",director_path,ip,port,low_bound,up_bound);
     int count = 0,count2= 0;
     node* root = NULL;
+    char city1[70],city2[70];
     
-    root = read_from_disk(director_path,low_bound,up_bound,root);
+    root = read_from_disk(director_path,low_bound,up_bound,root,city1,city2);
 
     search(root,"00-01-2000","20-11-2055","VILLA","ADANA",1,&count);
     search(root,"00-01-2000","20-11-2055","VILLA","",0,&count2);
@@ -84,11 +104,72 @@ int main(int argc, char*argv[]){
     len = sprintf(buff,"%d Adana-Ankara",res);
     buff[len] = '\0';
 
-   
-    //req[len] ='\0';
-    //client = client_to_server_connect(ip,port);
+    int unique_port;
+    int server;
+    int pid = get_pid_from_proc_self();
+    unique_port = (pid%31250) * 2 + 3002;
+    if(unique_port == port){
+        unique_port = unique_port - 1;
+    }
 
-    //write(client,buff,strlen(buff)+1);
+    len = sprintf(buff,"%d %s %s",unique_port,city1,city2);
+    buff[len] = '\0';
+    //req[len] ='\0';
+
+    client = client_to_server_connect(ip,port);
+
+    server = server_socketfd(unique_port);
+
+    write(client,buff,strlen(buff)+1);
+
+   
+
+    printf(" server  : %d %d\n",server,unique_port);
+
+    int rd = 0;
+    int newfd;
+    struct sockaddr_in newAddr;
+
+    while(1){
+        socklen_t addr_size = sizeof(struct sockaddr_in);
+        if ((newfd = accept(server, (struct sockaddr *)&newAddr, &addr_size)) == -1)
+            exitInf("accept error");
+        pthread_create(&ntimes[i],NULL,connection_thread,&newfd);
+
+        rd = read(newfd,buff2,1024);
+        printf("%s\n",buff2);
+        char *token = strtok(buff2," ");
+        char *type = strtok(NULL," ");
+        char *date1 = strtok(NULL," ");
+        char *date2 = strtok(NULL," ");
+        char *city = strtok(NULL," ");
+
+        perror("heyeyyy2");
+        int count3 = 0;
+        char result[10];
+        if(city == NULL){
+            search(root,date1,date2,type,"",0,&count3);
+            printf("%s %s %s %d\n",date1,date2,type,count3);
+            sprintf(result,"%d",count3);
+            write(newfd,result,strlen(result)+1);
+        }
+        else{
+            perror("heyyy3");
+            search(root,date1,date2,type,city,1,&count3);
+            printf("%s %s %s %s %d\n",date1,date2,type,city,count3);
+            sprintf(result,"%d",count3);
+            write(newfd,result,strlen(result)+1);
+        }
+        t_count++;
+    }
+
+
+
+
+
+    
+
+
     //inorder(root);
 
     
@@ -137,5 +218,13 @@ int main(int argc, char*argv[]){
     return 0;
 
 }    
+
+
+void *connection_thread(void* param){
+    int newfd = *((int *)(param));
+
+
+}    
+
 
 
