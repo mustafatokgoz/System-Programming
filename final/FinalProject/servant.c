@@ -12,6 +12,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <errno.h>
 
 #include "helper.h"
 #include "utility.h"
@@ -140,7 +141,6 @@ int main(int argc, char*argv[]){
     printf("Servant %d: listening at port %d\n",pid,unique_port);
     write(client,buff,strlen(buff)+1);
 
-   
 
     int rd = 0;
     int newfd;
@@ -154,11 +154,19 @@ int main(int argc, char*argv[]){
             break;
         }
         socklen_t addr_size = sizeof(struct sockaddr_in);
-        if ((newfd = accept(server, (struct sockaddr *)&newAddr, &addr_size)) == -1)
+        if ((newfd = accept(server, (struct sockaddr *)&newAddr, &addr_size)) == -1){
+                if(errno == EINTR)
+                continue; // try again
+                if(sig_check == 1){
+                    for(i = 0; i< t_count ;i++){
+                        pthread_join(thread[i],ret);
+                    }
+                    break;
+                }
             exitInf("accept error");
-        pthread_create(&thread[t_count],NULL,connection_thread,&newfd);
-        
 
+        }    
+        pthread_create(&thread[t_count],NULL,connection_thread,&newfd);
     }
 
 

@@ -11,6 +11,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <string.h>
+#include <errno.h>
 
 #include "networking.h"
 #include "helper.h"
@@ -109,8 +110,17 @@ int main(int argc, char*argv[]){
             break;
         }
         socklen_t addr_size = sizeof(struct sockaddr_in);
-        if ((newfd = accept(sockfd, (struct sockaddr *)&newAddr, &addr_size)) == -1)
-            exitInf("accept error");
+        if ((newfd = accept(sockfd, (struct sockaddr *)&newAddr, &addr_size)) == -1){
+                if(errno == EINTR)
+                    continue; // try again
+                if(sig_check == 1){
+                    for(i = 0;i < number_of_ports; i++){
+                        kill(servant_port[i].pid,SIGINT);
+                    }
+                break;
+                }
+                exitInf("accept error");
+        }    
         
         pthread_mutex_lock(&mutex2);
         while (active == N) { // if everyone is busy, wait
