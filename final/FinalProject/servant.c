@@ -35,6 +35,14 @@ pid_t get_pid_from_proc_self () {
 }
 
 
+sig_atomic_t sig_check=0;
+
+/*to handle ctrl c*/
+void signal_handle(int sig) {
+    sig_check=1;
+}
+
+
 int main(int argc, char*argv[]){
     char ch;
     int n,m;
@@ -48,6 +56,13 @@ int main(int argc, char*argv[]){
     void *ret;
     int client;
     int low_bound,up_bound;
+
+    struct sigaction sa;
+
+    sa.sa_handler = signal_handle;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags=0;
+    sigaction(SIGINT,&sa,NULL);
     
     while ((ch = getopt (argc, argv, "d:c:r:p:")) != -1){
       switch (ch){
@@ -132,84 +147,23 @@ int main(int argc, char*argv[]){
     struct sockaddr_in newAddr;
 
     while(1){
+        if(sig_check == 1){
+            for(i = 0; i< t_count ;i++){
+                pthread_join(thread[i],ret);
+            }
+            break;
+        }
         socklen_t addr_size = sizeof(struct sockaddr_in);
         if ((newfd = accept(server, (struct sockaddr *)&newAddr, &addr_size)) == -1)
             exitInf("accept error");
         pthread_create(&thread[t_count],NULL,connection_thread,&newfd);
+        
 
-        rd = read(newfd,buff2,1024);
-        char *token = strtok(buff2," ");
-        char *type = strtok(NULL," ");
-        char *date1 = strtok(NULL," ");
-        char *date2 = strtok(NULL," ");
-        char *city = strtok(NULL," ");
-
-        int count3 = 0;
-        char result[10];
-        if(city == NULL){
-            search(root,date1,date2,type,"",0,&count3);
-            sprintf(result,"%d",count3);
-            write(newfd,result,strlen(result)+1);
-        }
-        else{
-            search(root,date1,date2,type,city,1,&count3);
-            sprintf(result,"%d",count3);
-            write(newfd,result,strlen(result)+1);
-        }
-        t_count++;
     }
 
-
-
-
-
-    
-
-
-    //inorder(root);
 
     
     free_tree(root);
-    
-    
-    
-    /*
-    char **content;
-    content = malloc(5 * sizeof(char *));
-    for(i = 0; i < 5; i++){
-        content[i] = malloc(50 * sizeof(char));
-    }
-    strcpy(content[0],"mustafa tokgoz");
-    strcpy(content[1],"musokgoz  dksjbfdkjs");
-    strcpy(content[2],"must fdlksnfkdlsnf dsoz");
-    strcpy(content[3],"musknfdk oz");
-    node* root = NULL;
-    root = insert(root,"10-11-2001","ANKARA","TARLA",content,5);
-    insert(root,"20-11-2002","ISTANBUL","BINA",content,5);
-    strcpy(content[2],"serhatoz  dksjbfdkjs");
-    strcpy(content[3],"mserhatnfkdlsnf dsoz");
-    insert(root,"14-01-2000","ANKARA","KAPI",content,5);
-    insert(root,"20-11-2011","ISTANBUL","TARLA",content,5);
-    insert(root,"18-11-2020","ANKARA","EV",content,5);
- 
-    node* root2 = root;
-    
-
-    int count;
-    
-    // print inoder traversal of the BST
-    printf("%d \n",count);
-    inorder(root);
-    
-
-    free_array2(content,5);
-
-    */
-
-
-
-    
-
 
     return 0;
 
@@ -217,6 +171,7 @@ int main(int argc, char*argv[]){
 
 
 void *connection_thread(void* param){
+
     int newfd = *((int *)(param));
     char buff2[1024];
     pthread_mutex_lock(&mutex1);
@@ -231,17 +186,18 @@ void *connection_thread(void* param){
     char result[10];
     if(city == NULL){
         search(root_thread,date1,date2,type,"",0,&count3);
-        printf("%s %s %s %d\n",date1,date2,type,count3);
+        //printf("%s %s %s %d\n",date1,date2,type,count3);
         sprintf(result,"%d",count3);
         write(newfd,result,strlen(result)+1);
     }
     else{
         search(root_thread,date1,date2,type,city,1,&count3);
-        printf("%s %s %s %s %d\n",date1,date2,type,city,count3);
+        //printf("%s %s %s %s %d\n",date1,date2,type,city,count3);
         sprintf(result,"%d",count3);
         write(newfd,result,strlen(result)+1);
     }
     t_count++;
+    close(newfd);
     pthread_mutex_unlock(&mutex1);
 
     return NULL;

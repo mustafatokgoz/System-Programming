@@ -34,6 +34,14 @@ queue *connection_queue = NULL;
 void thread_pool();
 void *server_thread(void* param);
 
+sig_atomic_t sig_check=0;
+
+/*to handle ctrl c*/
+void signal_handle(int sig) {
+    sig_check=1;
+}
+
+
 int main(int argc, char*argv[]){
     char ch;
     int n=0,m;
@@ -42,8 +50,17 @@ int main(int argc, char*argv[]){
     int sockfd;
     char *err_mass = "You should enter the correct command (Run Way: ./server -p PORT -t numberOfThreads)\n";
     struct sockaddr_in newAddr;
-    int newfd;
+    int newfd,i;
     char buff[1024];
+
+    struct sigaction sa;
+
+    sa.sa_handler = signal_handle;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags=0;
+    sigaction(SIGINT,&sa,NULL);
+
+
     while ((ch = getopt (argc, argv, "p:t:")) != -1){
       switch (ch){
         case 'p':
@@ -84,6 +101,13 @@ int main(int argc, char*argv[]){
     thread_pool();
 
     while(1){
+
+        if(sig_check == 1){
+            for(i = 0;i < number_of_ports; i++){
+                kill(servant_port[i].pid,SIGINT);
+            }
+            break;
+        }
         socklen_t addr_size = sizeof(struct sockaddr_in);
         if ((newfd = accept(sockfd, (struct sockaddr *)&newAddr, &addr_size)) == -1)
             exitInf("accept error");
@@ -99,8 +123,12 @@ int main(int argc, char*argv[]){
         pthread_mutex_unlock(&mutex1);
 
         pthread_cond_signal(&cond1); // thread göndermeye başlıcak
-
-
+        if(sig_check == 1){
+            for(i = 0;i < number_of_ports; i++){
+                kill(servant_port[i].pid,SIGINT);
+            }
+            break;
+        }
         /*
             read(newfd,buff,1024);
             printf("buff : %s\n ",buff);
@@ -113,7 +141,9 @@ int main(int argc, char*argv[]){
 
         */
     }
-
+    close(sockfd);
+    free(ntimes);
+    free(sendparam);
     return 0;
 
 }
@@ -146,7 +176,7 @@ void *server_thread(void* param){
         int current_fd = remove_front(connection_queue);
         pthread_mutex_unlock(&mutex1);
 
-        pthread_mutex_lock(&mutex2);
+        pthread_mutex_lock(&mutex3);
 
         read(current_fd,buff,MAX);
         if(strncmp(buff,"transactionCount",strlen("transactionCount"))==0){
@@ -208,7 +238,7 @@ void *server_thread(void* param){
                     printf("Response received: %s, forwarded to client\n",res);
                 }
             }
-            
+            close(fd_new);
 
         }
         else{
@@ -233,10 +263,15 @@ void *server_thread(void* param){
 
             
         }
+        close(current_fd);
         
+        pthread_mutex_unlock(&mutex3);
+
+        pthread_mutex_lock(&mutex2);
         active--;
         pthread_mutex_unlock(&mutex2);
         pthread_cond_signal(&cond2);
+       
 
     }
 

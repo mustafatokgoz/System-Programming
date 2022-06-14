@@ -1,0 +1,3 @@
+./client -r FinalProject/requestFile -q 33000 -s 127.0.0.1
+./servant -d FinalProject/dataset -c 10-19 -r 127.0.0.1 -p 33000
+./server -p 33000 -t 5

@@ -4,7 +4,8 @@
         "stdlib.h": "c",
         "helper.h": "c",
         "bst_for_files.h": "c",
-        "socket.h": "c"
+        "socket.h": "c",
+        "in.h": "c"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }
