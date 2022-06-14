@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PORT=8612
+PORT=8630
 
 ./server -p $PORT -t 11 &
 sleep 1

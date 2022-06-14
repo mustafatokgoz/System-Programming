@@ -34,6 +34,7 @@ int number_of_ports = 0;
 queue *connection_queue = NULL;
 void thread_pool();
 void *server_thread(void* param);
+char *timestamp();
 
 sig_atomic_t sig_check=0;
 
@@ -45,14 +46,14 @@ void signal_handle(int sig) {
 
 int main(int argc, char*argv[]){
     char ch;
-    int n=0,m;
+    //int n=0,m;
     int check_input = 0;
     int port,t;
     int sockfd;
     char *err_mass = "You should enter the correct command (Run Way: ./server -p PORT -t numberOfThreads)\n";
     struct sockaddr_in newAddr;
     int newfd,i;
-    char buff[1024];
+    //char buff[1024];
 
     struct sigaction sa;
 
@@ -93,7 +94,7 @@ int main(int argc, char*argv[]){
     }
 
     sockfd = server_socketfd(port);
-    int res;
+    //int res;
 
     ntimes = malloc(t * sizeof(pthread_t));
     sendparam = malloc(t * sizeof(int));
@@ -167,7 +168,7 @@ void thread_pool(){
 
 
 void *server_thread(void* param){
-    int p = *((int *)(param));
+    //int p = *((int *)(param));
     char buff[MAX];
     int i;
     while(1){
@@ -175,10 +176,10 @@ void *server_thread(void* param){
         while(isQueue_empty(connection_queue)) { // if no query just wait
             pthread_cond_wait(&cond1,&mutex1);
         }
-        //if (exitSignal){
-        //    pthread_mutex_unlock(&taskMutex);
-        //    break;
-        //}
+        if (sig_check == 1){
+            pthread_mutex_unlock(&mutex1);
+            break;
+        }
         pthread_mutex_lock(&mutex2);
         active++;
         pthread_mutex_unlock(&mutex2);
@@ -189,8 +190,12 @@ void *server_thread(void* param){
         pthread_mutex_lock(&mutex3);
 
         read(current_fd,buff,MAX);
+        if (sig_check == 1){
+            pthread_mutex_unlock(&mutex3);
+            break;
+        }
         if(strncmp(buff,"transactionCount",strlen("transactionCount"))==0){
-            printf("Request arrived “%s”\n",buff);
+            printf("%s , Request arrived “%s”\n",timestamp(),buff);
             char temp_buff[MAX];
             strcpy(temp_buff,buff);
             char *token = strtok(buff," ");
@@ -198,13 +203,16 @@ void *server_thread(void* param){
             char *date1 = strtok(NULL," ");
             char *date2 = strtok(NULL," ");
             char *city = strtok(NULL," ");
+            if(token == NULL || type == NULL || date1 == NULL || date2 == NULL){
+                exitInf("request Error");
+            }
             int fd_new;
 
             if(city == NULL){
                 int total = 0;
                 int cur_res;
                 char res[MAX];
-                printf("Contacting ALL servants\n");
+                printf("%s , Contacting ALL servants\n",timestamp());
                 for(i = 0; i < number_of_ports; i++){
                     fd_new = client_to_server_connect("127.0.0.1",servant_port[i].port);
                     write(fd_new,temp_buff,strlen(temp_buff)+1);
@@ -217,7 +225,7 @@ void *server_thread(void* param){
                 if(write(current_fd,res,strlen(res)+1) ==-1){
                     exitInf("Write Error");
                 }
-                printf("Response received: %d, forwarded to client\n",total);
+                printf("%s , Response received: %d, forwarded to client\n",timestamp(),total);
             }
             else{
                 int index = 0;
@@ -229,7 +237,7 @@ void *server_thread(void* param){
                     }
                 }
                 if (check == 1){
-                    printf("Contacting servant %d\n",servant_port[index].pid);
+                    printf("%s , Contacting servant %d\n",timestamp(),servant_port[index].pid);
                     fd_new = client_to_server_connect("127.0.0.1",servant_port[index].port);
                     write(fd_new,temp_buff,strlen(temp_buff)+1);
                     char res[MAX];
@@ -237,7 +245,7 @@ void *server_thread(void* param){
                     if(write(current_fd,res,strlen(res)+1) ==-1){
                         exitInf("Write Error");
                     }
-                    printf("Response received: %d, forwarded to client\n",atoi(res));
+                    printf("%s , Response received: %d, forwarded to client\n",timestamp(),atoi(res));
                 }
                 else{
                     char res[MAX];
@@ -245,10 +253,14 @@ void *server_thread(void* param){
                     if(write(current_fd,res,strlen(res)+1) ==-1){
                             exitInf("Write Error");
                     }
-                    printf("Response received: %s, forwarded to client\n",res);
+                    printf("%s , Response received: %s, forwarded to client\n",timestamp(),res);
                 }
             }
             close(fd_new);
+            if (sig_check == 1){
+                pthread_mutex_unlock(&mutex3);
+                break;
+            }
 
         }
         else{
@@ -268,12 +280,13 @@ void *server_thread(void* param){
             if(number_of_ports == 1024){
                 exitInf("Maximum servant number exceeded");
             }
-            printf("Servant %d present at port %d handling cities %s-%s\n",servant_port[number_of_ports-1].pid,servant_port[number_of_ports-1].port,
+            printf("%s , Servant %d present at port %d handling cities %s-%s\n",timestamp(),servant_port[number_of_ports-1].pid,servant_port[number_of_ports-1].port,
                         servant_port[number_of_ports-1].city1,servant_port[number_of_ports-1].city2);
 
             
         }
         close(current_fd);
+        
         
         pthread_mutex_unlock(&mutex3);
 
@@ -287,3 +300,15 @@ void *server_thread(void* param){
 
     return NULL;
 }    
+
+
+
+char *timestamp(){
+    time_t localTime;
+    localTime=time(NULL);
+    char *str = asctime( localtime(&localTime));
+    char *removed = strchr(str, '\n');
+    if(removed != NULL)
+        removed[0] = '\0';
+    return str;
+}

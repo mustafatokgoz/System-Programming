@@ -19,7 +19,7 @@
 #include "bst_for_files.h"
 #include "networking.h"
 
-#define MAX
+#define MAX 1024
 void *connection_thread(void* param);
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 pthread_t thread[MAX];
@@ -46,15 +46,14 @@ void signal_handle(int sig) {
 
 int main(int argc, char*argv[]){
     char ch;
-    int n,m;
     char *director_path,*c_param,*ip;
     int port;
     int check_input = 0;
     char *err_mass = "You should enter the correct command (Run Way: ./servant -d directoryPath -c 10-19 -r IP -p PORT)\n";
-    int i,j;
+    int i;
     char buff[256];
-    char buff2[1024];
-    void *ret;
+    //char buff2[MAX];
+    void *ret=NULL;
     int client;
     int low_bound,up_bound;
 
@@ -106,7 +105,7 @@ int main(int argc, char*argv[]){
         exit(0);
     }
 
-    int count = 0,count2= 0;
+    //int count = 0,count2= 0;
     node* root = NULL;
     char city1[70],city2[70];
     int pid = get_pid_from_proc_self();
@@ -119,7 +118,7 @@ int main(int argc, char*argv[]){
     //search(root,"00-01-2000","20-11-2055","VILLA","",0,&count2);
     //printf("%d %d\n",count,count2);
 
-    int res = 100,len;
+    int len;
     //len = sprintf(buff,"%d Adana-Ankara",res);
     //buff[len] = '\0';
 
@@ -142,7 +141,7 @@ int main(int argc, char*argv[]){
     write(client,buff,strlen(buff)+1);
 
 
-    int rd = 0;
+    //int rd = 0;
     int newfd;
     struct sockaddr_in newAddr;
 
@@ -181,15 +180,17 @@ int main(int argc, char*argv[]){
 void *connection_thread(void* param){
 
     int newfd = *((int *)(param));
-    char buff2[1024];
+    char buff2[MAX];
     pthread_mutex_lock(&mutex1);
-    read(newfd,buff2,1024);
+    read(newfd,buff2,MAX);
     char *token = strtok(buff2," ");
     char *type = strtok(NULL," ");
     char *date1 = strtok(NULL," ");
     char *date2 = strtok(NULL," ");
     char *city = strtok(NULL," ");
-
+    if(token == NULL){
+         exitInf("Request error typing");
+    }
     int count3 = 0;
     char result[10];
     if(city == NULL){

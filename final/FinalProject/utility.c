@@ -23,8 +23,9 @@ int seperate_c_paramater(int *lower_bound,int *upper_bound,char *c_parameter){
 
 void sort_cities(char arr[][70], int n){
     char temp[70];
-    for (int i=0; i<n-1; i++){
-        for (int j=0; j<n-1-i; j++){
+    int i,j;
+    for (i=0; i<n-1; i++){
+        for (j=0; j<n-1-i; j++){
             if (strcmp(arr[j], arr[j+1]) > 0){
                 strcpy(temp, arr[j]);
                 strcpy(arr[j], arr[j+1]);
@@ -44,11 +45,10 @@ node* read_from_disk(char *director_path,int low_bound,int up_bound,node* root,c
     node *first_addr;
     int city_count = 0;
     int index = 0;
-    int i = 0,k = 0;
+    int i = 0;
     int check = 0;
     int len;
     
-    //printf("directory path : %s \n",director_path);
     if(directory == NULL){
         return 0;
     }
@@ -59,8 +59,7 @@ node* read_from_disk(char *director_path,int low_bound,int up_bound,node* root,c
         } 
     }    
     closedir(directory);
-    //city_count = city_count - 2;
-    //printf("city count %d\n",city_count);
+   
     
 
     directory = opendir(director_path); 
@@ -105,12 +104,11 @@ node* read_from_disk(char *director_path,int low_bound,int up_bound,node* root,c
             
             if(dir->d_type == DT_REG){
                 
-                //strcpy(root->city,sorted_array[i+low_bound]);
-                //strcpy(root->date,dir->d_name);
+                
                 
                 len = sprintf(buff2,"%s/%s",buff,dir->d_name);
                 buff2[len] = '\0';
-                //open_file(buff);
+                
                 FILE * fp;
                 
                 
@@ -119,7 +117,7 @@ node* read_from_disk(char *director_path,int low_bound,int up_bound,node* root,c
                     exit(0);
                    
                 j = 0;
-                //fcontent = malloc(1 * sizeof(char *));
+                
                 fcontent = NULL;
                 char buffer[1024];
                 while (fgets(buffer, 1024, fp)){
@@ -141,19 +139,7 @@ node* read_from_disk(char *director_path,int low_bound,int up_bound,node* root,c
                         }
                     }    
                 }
-                /*
-                if(fcontent[0] == NULL){
-                    perror("Bu yere giriyor");
-                    free(fcontent);
-                }
-                else if(strlen(fcontent[0]) < 3){
-                    perror("Bu yere giriyor");
-                    free_array2(fcontent,j);
-                    
-                }
-                */
-                
-                //else{
+               
                 if(fcontent != NULL){
                     if(check == 0){
                         root = insert(root,dir->d_name,sorted_array[i+low_bound-1],fcontent,j);
@@ -165,11 +151,10 @@ node* read_from_disk(char *director_path,int low_bound,int up_bound,node* root,c
                         insert(root,dir->d_name,sorted_array[i+low_bound-1],fcontent,j);
                     }
                 }
-                //}
+                
                 
                 fclose(fp);
-                //if (line != NULL)
-                //    free(line);
+                
             } 
         }
         closedir(directory);

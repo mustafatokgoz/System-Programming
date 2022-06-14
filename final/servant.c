@@ -18,10 +18,10 @@
 #include "bst_for_files.h"
 #include "networking.h"
 
-#define MAX
+#define MAX 1024
 void *connection_thread(void* param);
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
-pthread_t thread[MAX];
+pthread_t thread[MAX]={0};
 int t_count = 0;
 node* root_thread;
 
@@ -44,7 +44,7 @@ int main(int argc, char*argv[]){
     char *err_mass = "You should enter the correct command (Run Way: ./servant -d directoryPath -c 10-19 -r IP -p PORT)\n";
     int i,j;
     char buff[256];
-    char buff2[1024];
+    char buff2[MAX];
     void *ret;
     int client;
     int low_bound,up_bound;
@@ -137,7 +137,7 @@ int main(int argc, char*argv[]){
             exitInf("accept error");
         pthread_create(&thread[t_count],NULL,connection_thread,&newfd);
 
-        rd = read(newfd,buff2,1024);
+        rd = read(newfd,buff2,MAX);
         char *token = strtok(buff2," ");
         char *type = strtok(NULL," ");
         char *date1 = strtok(NULL," ");
@@ -218,9 +218,9 @@ int main(int argc, char*argv[]){
 
 void *connection_thread(void* param){
     int newfd = *((int *)(param));
-    char buff2[1024];
+    char buff2[MAX];
     pthread_mutex_lock(&mutex1);
-    read(newfd,buff2,1024);
+    read(newfd,buff2,MAX);
     char *token = strtok(buff2," ");
     char *type = strtok(NULL," ");
     char *date1 = strtok(NULL," ");

@@ -127,7 +127,7 @@ void *request_thread(void* param){
     char req[strlen(requests[p])+1];
     int len = strlen(requests[p]);
     char respon[1024];
-    int res = 0;
+
     sprintf(buff,"%d",len);
     strcpy(req,requests[p]);
     //req[len] ='\0';
