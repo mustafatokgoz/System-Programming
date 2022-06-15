@@ -52,7 +52,6 @@ int main(int argc, char*argv[]){
     char *err_mass = "You should enter the correct command (Run Way: ./servant -d directoryPath -c 10-19 -r IP -p PORT)\n";
     int i;
     char buff[256];
-    //char buff2[MAX];
     void *ret=NULL;
     int client;
     int low_bound,up_bound;
@@ -105,7 +104,6 @@ int main(int argc, char*argv[]){
         exit(0);
     }
 
-    //int count = 0,count2= 0;
     node* root = NULL;
     char city1[70],city2[70];
     int pid = get_pid_from_proc_self();
@@ -114,13 +112,9 @@ int main(int argc, char*argv[]){
     root_thread = root;
 
     printf("Servant %d: loaded dataset, cities %s-%s\n",pid,city1,city2);
-    //search(root,"00-01-2000","20-11-2055","VILLA","ADANA",1,&count);
-    //search(root,"00-01-2000","20-11-2055","VILLA","",0,&count2);
-    //printf("%d %d\n",count,count2);
+    
 
     int len;
-    //len = sprintf(buff,"%d Adana-Ankara",res);
-    //buff[len] = '\0';
 
     int unique_port;
     int server;
@@ -132,7 +126,7 @@ int main(int argc, char*argv[]){
 
     len = sprintf(buff,"%d %d %s %s",pid,unique_port,city1,city2);
     buff[len] = '\0';
-    //req[len] ='\0';
+    
 
     client = client_to_server_connect(ip,port);
 
@@ -141,7 +135,7 @@ int main(int argc, char*argv[]){
     write(client,buff,strlen(buff)+1);
 
 
-    //int rd = 0;
+    
     int newfd;
     struct sockaddr_in newAddr;
 
@@ -158,6 +152,7 @@ int main(int argc, char*argv[]){
                 continue; // try again
                 if(sig_check == 1){
                     for(i = 0; i< t_count ;i++){
+                        pthread_mutex_unlock(&mutex1);
                         pthread_join(thread[i],ret);
                     }
                     break;
@@ -195,13 +190,11 @@ void *connection_thread(void* param){
     char result[10];
     if(city == NULL){
         search(root_thread,date1,date2,type,"",0,&count3);
-        //printf("%s %s %s %d\n",date1,date2,type,count3);
         sprintf(result,"%d",count3);
         write(newfd,result,strlen(result)+1);
     }
     else{
         search(root_thread,date1,date2,type,city,1,&count3);
-        //printf("%s %s %s %s %d\n",date1,date2,type,city,count3);
         sprintf(result,"%d",count3);
         write(newfd,result,strlen(result)+1);
     }

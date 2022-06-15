@@ -1,4 +1,4 @@
-#!/bin/bash
+
 
 PORT=8630
 

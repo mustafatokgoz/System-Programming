@@ -104,8 +104,6 @@ node* read_from_disk(char *director_path,int low_bound,int up_bound,node* root,c
             
             if(dir->d_type == DT_REG){
                 
-                
-                
                 len = sprintf(buff2,"%s/%s",buff,dir->d_name);
                 buff2[len] = '\0';
                 
@@ -124,7 +122,7 @@ node* read_from_disk(char *director_path,int low_bound,int up_bound,node* root,c
                     if(strlen(buffer) > 5 && buffer[0]!= '\n' ){
                         char **new_fcontent = realloc(fcontent,(j+1) * sizeof(char*));
                         if(new_fcontent == NULL){
-                            perror("null olyor");
+                            perror("null");
                         }
                         fcontent = new_fcontent;
                         buffer[strcspn(buffer, "\n")] = 0;
@@ -135,7 +133,6 @@ node* read_from_disk(char *director_path,int low_bound,int up_bound,node* root,c
                             if(strlen(fcontent[j]) > 4){
                                 j++;
                             }
-                                
                         }
                     }    
                 }

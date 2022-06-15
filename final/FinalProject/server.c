@@ -46,14 +46,13 @@ void signal_handle(int sig) {
 
 int main(int argc, char*argv[]){
     char ch;
-    //int n=0,m;
     int check_input = 0;
     int port,t;
     int sockfd;
     char *err_mass = "You should enter the correct command (Run Way: ./server -p PORT -t numberOfThreads)\n";
     struct sockaddr_in newAddr;
     int newfd,i;
-    //char buff[1024];
+    
 
     struct sigaction sa;
 
@@ -94,7 +93,7 @@ int main(int argc, char*argv[]){
     }
 
     sockfd = server_socketfd(port);
-    //int res;
+    
 
     ntimes = malloc(t * sizeof(pthread_t));
     sendparam = malloc(t * sizeof(int));
@@ -115,6 +114,7 @@ int main(int argc, char*argv[]){
                 if(errno == EINTR)
                     continue; // try again
                 if(sig_check == 1){
+                    pthread_cond_broadcast(&cond1);
                     for(i = 0;i < number_of_ports; i++){
                         kill(servant_port[i].pid,SIGINT);
                     }
@@ -124,7 +124,7 @@ int main(int argc, char*argv[]){
         }    
         
         pthread_mutex_lock(&mutex2);
-        while (active == N) { // if everyone is busy, wait
+        while (active == N) { 
             
             pthread_cond_wait(&cond2,&mutex2);
         }
@@ -133,24 +133,14 @@ int main(int argc, char*argv[]){
         add_rear(connection_queue,newfd); 
         pthread_mutex_unlock(&mutex1);
 
-        pthread_cond_signal(&cond1); // thread göndermeye başlıcak
+        pthread_cond_signal(&cond1); 
         if(sig_check == 1){
+            pthread_cond_broadcast(&cond1);
             for(i = 0;i < number_of_ports; i++){
                 kill(servant_port[i].pid,SIGINT);
             }
             break;
         }
-        /*
-            read(newfd,buff,1024);
-            printf("buff : %s\n ",buff);
-
-            
-            
-            if(write(newfd,"1",1) ==-1){
-                perror("Heeyyy");
-            }
-
-        */
     }
     close(sockfd);
     free(ntimes);
@@ -168,12 +158,11 @@ void thread_pool(){
 
 
 void *server_thread(void* param){
-    //int p = *((int *)(param));
     char buff[MAX];
     int i;
     while(1){
         pthread_mutex_lock(&mutex1);
-        while(isQueue_empty(connection_queue)) { // if no query just wait
+        while(isQueue_empty(connection_queue)) {
             pthread_cond_wait(&cond1,&mutex1);
         }
         if (sig_check == 1){
