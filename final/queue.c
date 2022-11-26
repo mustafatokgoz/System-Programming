@@ -1,7 +1,6 @@
 #include "queue.h"
 
-queue *create_queue()
-{
+queue *create_queue(){
     queue *head = (queue *)malloc(sizeof(queue));
     head->size = 0;
     head->rearp = NULL;
@@ -9,8 +8,7 @@ queue *create_queue()
     return head;
 }
 
-void add_rear(queue *head, int fd)
-{
+void add_rear(queue *head, int fd){
     if (head->size == 0)
     {
         head->rearp = (queue_node_t *)malloc(sizeof(queue_node_t));
@@ -26,8 +24,7 @@ void add_rear(queue *head, int fd)
     ++(head->size);
 }
 
-int remove_front(queue *head)
-{
+int remove_front(queue *head){
     queue_node_t *to_freep;
     int ans;
     to_freep = head->frontp;
@@ -45,11 +42,10 @@ int isQueue_empty(queue *head){
 int getf_front(queue *head){
     return head->frontp->data;
 }
-void print_queue(queue *head)
-{
+void print_queue(queue *head){
+    int i = 0;
     queue_node_t *iter = head->frontp;
-    for (int i = 0; i < head->size; i++)
-    {
+    for (i = 0; i < head->size; i++){
         printf("%d ", iter->data);
         iter = iter->restp;
     }

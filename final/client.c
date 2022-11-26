@@ -71,13 +71,12 @@ int main(int argc, char*argv[]){
         write(2,"You should enter port number bigger than 2000 and less than 65535\n",strlen("You should enter port number bigger than 2000 and less than 65535\n"));
         exit(0);
     }
-    perror("EHUEE");
     requests = get_requests(request_path,&n);
 
     if(requests == NULL){
         exitInf("File error");
     }
-    perror("EHUE222E");
+
 
     //for(i = 0; i < n; i++){
     //    printf("%s \n",requests[i]);
@@ -87,7 +86,7 @@ int main(int argc, char*argv[]){
     ntimes = malloc(n * sizeof(pthread_t));
     send = malloc(n * sizeof(int));
     N = n;
-    printf("Client: I have loaded %d requests and I’m creating 30 threads.\n",n);
+    printf("Client: I have loaded %d requests and I’m creating %d threads.\n",n,n);
     for(i = 0; i < n;i++){
         send[i] = i;
         pthread_create(&ntimes[i],NULL,request_thread,&send[i]);
@@ -128,7 +127,7 @@ void *request_thread(void* param){
     char req[strlen(requests[p])+1];
     int len = strlen(requests[p]);
     char respon[1024];
-    int res = 0;
+
     sprintf(buff,"%d",len);
     strcpy(req,requests[p]);
     //req[len] ='\0';

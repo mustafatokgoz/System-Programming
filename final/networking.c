@@ -27,13 +27,12 @@ int client_to_server_connect(char *ip,int port){
 int server_socketfd(int port){
     int socketfd;
     struct sockaddr_in serverAddr;
-    struct sockaddr_in newAddr;
 
     if ((socketfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
         exitInf("socket error");
 
     int value = 1;
-    if (setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR, &value, sizeof(int)) == -1)
+    if (setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &value, sizeof(int)) == -1)
         exitInf("setsockopt error");
     memset(&serverAddr, '\0', sizeof(serverAddr));
 
